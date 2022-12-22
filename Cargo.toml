@@ -1,0 +1,19 @@
+[package]
+name = "hightorrent"
+description = "High-level torrent library which supports Bittorrent v1, v2 and hybrid torrents"
+version = "0.1.0"
+edition = "2021"
+authors = [ "angrynode <angrynode@kl.netlib.re>" ]
+documentation = "https://docs.rs/hightorrent"
+keywords = [ "torrent", "magnet", "bittorrent", "infohash", "hash", "tracker" ]
+rust-version = "1.64"
+readme = "README.md"
+license = "AGPL-3.0-only"
+
+[dependencies]
+bt_bencode = "0.7"
+sha1 = "0.10"
+sha256 = "1.1"
+rustc-hex = "2.1"
+serde = { version = "1", features = [ "derive" ] }
+url = "2.3"
