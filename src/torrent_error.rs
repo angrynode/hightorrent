@@ -2,16 +2,20 @@
 #[snafu(context(suffix(Error)), visibility(pub))]
 pub enum TorrentError {
     #[snafu(display("Invalid infohash: {source}"))]
-    Hash { source: crate::info_hash::InfoHashError },
+    Hash {
+        source: crate::info_hash::InfoHashError,
+    },
     #[snafu(display("Invalid magnet: {source}"))]
-    MagnetLink { source: crate::magnet_link::MagnetLinkError },
-    TorrentFile { source: crate::torrent_file::TorrentFileError },
+    MagnetLink {
+        source: crate::magnet_link::MagnetLinkError,
+    },
+    TorrentFile {
+        source: crate::torrent_file::TorrentFileError,
+    },
     // TODO: deprecate below?
 
-
-
-//    #[snafu(display("Invalid torrent file {path}:\n{source}"))]
-//    InvalidTorrent { path: PathBuf, source: bt_bencode::Error },
+    //    #[snafu(display("Invalid torrent file {path}:\n{source}"))]
+    //    InvalidTorrent { path: PathBuf, source: bt_bencode::Error },
     #[snafu(display("Invalid magnet link"))]
     InvalidMagnet,
     #[snafu(display("Missing magnet hash type"))]
@@ -38,7 +42,9 @@ pub enum TorrentError {
     InvalidHashLength { hash: String },
     #[snafu(display("Invalid magnet hash {hash_type}:{hash}"))]
     InvalidMagnetHash { hash: String, hash_type: String },
-    #[snafu(display("The advertised magnet hash type {hash_type} mismatched the actual hash: {hash}"))]
+    #[snafu(display(
+        "The advertised magnet hash type {hash_type} mismatched the actual hash: {hash}"
+    ))]
     MismatchedMagnetHashType { hash: String, hash_type: String },
     #[snafu(display("Unsupported magnet hash type: {}", hash_type))]
     UnsupportedMagnetHashType { hash_type: String },

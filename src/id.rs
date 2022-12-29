@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::str::FromStr;
 
@@ -23,7 +23,7 @@ impl TorrentID {
     pub fn new<T: AsRef<str>>(s: T) -> Result<TorrentID, InfoHashError> {
         Self::from_str(s.as_ref())
     }
-    
+
     pub fn from_infohash(hash: &InfoHash) -> TorrentID {
         match hash {
             InfoHash::V1(v2hash) => TorrentID(v2hash.to_string()),

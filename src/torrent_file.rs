@@ -1,6 +1,6 @@
 use bt_bencode::Value as BencodeValue;
 use rustc_hex::ToHex;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
 use std::collections::HashMap;
@@ -23,8 +23,14 @@ impl std::fmt::Display for TorrentFileError {
         match self {
             TorrentFileError::NoNameFound => write!(f, "No name found"),
             TorrentFileError::InvalidBencode { reason } => write!(f, "Invalid bencode: {reason}"),
-            TorrentFileError::NotATorrent { reason } => write!(f, "Valid bencode, but does not seem to be a torrent ({reason})"),
-            TorrentFileError::WrongVersion { version } => write!(f, "Wrong torrent version: {version}, only v1 and v2 are supported)"),
+            TorrentFileError::NotATorrent { reason } => write!(
+                f,
+                "Valid bencode, but does not seem to be a torrent ({reason})"
+            ),
+            TorrentFileError::WrongVersion { version } => write!(
+                f,
+                "Wrong torrent version: {version}, only v1 and v2 are supported)"
+            ),
             TorrentFileError::InvalidHash { source } => write!(f, "Invalid hash: {source}"),
         }
     }
@@ -38,7 +44,9 @@ impl From<InfoHashError> for TorrentFileError {
 
 impl From<bt_bencode::Error> for TorrentFileError {
     fn from(e: bt_bencode::Error) -> TorrentFileError {
-        TorrentFileError::InvalidBencode { reason: e.to_string() }
+        TorrentFileError::InvalidBencode {
+            reason: e.to_string(),
+        }
     }
 }
 
@@ -119,7 +127,9 @@ impl TorrentFile {
         let torrent: DecodedTorrent = bt_bencode::from_slice(s).map_err(|e| {
             // We store a stringy representation of the error because bt_encode::Error
             // is not PartialEq
-            TorrentFileError::NotATorrent { reason: e.to_string() }
+            TorrentFileError::NotATorrent {
+                reason: e.to_string(),
+            }
         })?;
 
         // We just deserialized successfully so this is a safe unwrap
@@ -133,7 +143,8 @@ impl TorrentFile {
                 // just use the torrent name field for that
                 let digest = Sha1::digest(&info_bytes).to_vec().to_hex::<String>();
                 InfoHash::new(&digest)?
-            }, Some(2) => {
+            }
+            Some(2) => {
                 // Bittorrent v2 has mandatory file_tree dict
                 // see http://bittorrent.org/beps/bep_0052.html
                 if torrent.info.file_tree.is_some() {
@@ -149,11 +160,16 @@ impl TorrentFile {
                         hash
                     }
                 } else {
-                    return Err(TorrentFileError::NotATorrent { reason: "Torrentv2 without 'file_tree' field".to_string() });
+                    return Err(TorrentFileError::NotATorrent {
+                        reason: "Torrentv2 without 'file_tree' field".to_string(),
+                    });
                 }
-            }, _ => {
+            }
+            _ => {
                 // Version is not null and is not 1-2
-                return Err(TorrentFileError::WrongVersion { version: torrent.info.version.unwrap() });
+                return Err(TorrentFileError::WrongVersion {
+                    version: torrent.info.version.unwrap(),
+                });
             }
         };
 
@@ -187,8 +203,14 @@ mod tests {
         println!("{:?}", res);
         assert!(res.is_ok());
         let torrent = res.unwrap();
-        assert_eq!(&torrent.name, "Goldman, Emma - Essential Works of Anarchism");
-        assert_eq!(torrent.hash, InfoHash::V1("c811b41641a09d192b8ed81b14064fff55d85ce3".to_string()));
+        assert_eq!(
+            &torrent.name,
+            "Goldman, Emma - Essential Works of Anarchism"
+        );
+        assert_eq!(
+            torrent.hash,
+            InfoHash::V1("c811b41641a09d192b8ed81b14064fff55d85ce3".to_string())
+        );
     }
 
     #[test]
@@ -198,8 +220,12 @@ mod tests {
         assert!(res.is_ok());
         let torrent = res.unwrap();
         assert_eq!(&torrent.name, "bittorrent-v2-test");
-        assert_eq!(torrent.hash, InfoHash::V2("caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e".to_string()));
-
+        assert_eq!(
+            torrent.hash,
+            InfoHash::V2(
+                "caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e".to_string()
+            )
+        );
     }
 
     #[test]
@@ -209,11 +235,12 @@ mod tests {
         assert!(res.is_ok());
         let torrent = res.unwrap();
         assert_eq!(&torrent.name, "bittorrent-v1-v2-hybrid-test");
-        assert_eq!(torrent.hash, InfoHash::Hybrid((
-            "631a31dd0a46257d5078c0dee4e66e26f73e42ac".to_string(),
-            "d8dd32ac93357c368556af3ac1d95c9d76bd0dff6fa9833ecdac3d53134efabb".to_string()
-        )));
-
-
+        assert_eq!(
+            torrent.hash,
+            InfoHash::Hybrid((
+                "631a31dd0a46257d5078c0dee4e66e26f73e42ac".to_string(),
+                "d8dd32ac93357c368556af3ac1d95c9d76bd0dff6fa9833ecdac3d53134efabb".to_string()
+            ))
+        );
     }
 }

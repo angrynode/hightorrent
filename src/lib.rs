@@ -15,7 +15,8 @@
 //! interact with. The contained stringy value is ambiguous, and can represent either a precise
 //! [`InfoHash`](crate::hash::InfoHash) or a libtorrent-compatible [`TorrentID`](crate::id::TorrentID) (truncated hash).
 
-#[macro_use] extern crate serde;
+#[macro_use]
+extern crate serde;
 
 mod hash;
 pub use hash::{InfoHash, InfoHashError, TryInfoHash};
@@ -30,13 +31,13 @@ mod magnet;
 pub use magnet::{MagnetLink, MagnetLinkError};
 
 mod torrent;
-pub use torrent::{Torrent, IntoTorrent};
+pub use torrent::{IntoTorrent, Torrent};
 
 mod torrent_file;
 pub use torrent_file::{TorrentFile, TorrentFileError};
 
 mod target;
-pub use target::{SingleTarget, ToSingleTarget, MultiTarget};
+pub use target::{MultiTarget, SingleTarget, ToSingleTarget};
 
 mod tracker;
 pub use tracker::{PeerSource, Tracker, TrackerError, TrackerScheme, TryIntoTracker};

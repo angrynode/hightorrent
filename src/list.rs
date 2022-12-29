@@ -26,16 +26,19 @@ impl TorrentList {
     /// Find a single torrent in the TorrentList, matching a specific
     /// [`SingleTarget`](crate::target::SingleTarget).
     pub fn get(&self, target: &SingleTarget) -> Option<Torrent> {
-        self.0.iter().find(|t| {
-            match &t.hash {
-                InfoHash::V1(h) | InfoHash::V2(h) => h.as_str() == target.as_str(),
-                InfoHash::Hybrid((v1, _v2)) => {
-                    // Priority is given to matching v2, for more resilience to collision attacks
-                    // but we can still match hybrid by infohash v1 SingleTarget
-                    t.id.as_str() == target.truncated() || v1 == target.as_str()
+        self.0
+            .iter()
+            .find(|t| {
+                match &t.hash {
+                    InfoHash::V1(h) | InfoHash::V2(h) => h.as_str() == target.as_str(),
+                    InfoHash::Hybrid((v1, _v2)) => {
+                        // Priority is given to matching v2, for more resilience to collision attacks
+                        // but we can still match hybrid by infohash v1 SingleTarget
+                        t.id.as_str() == target.truncated() || v1 == target.as_str()
+                    }
                 }
-            }
-        }).map(|t| t.clone())
+            })
+            .map(|t| t.clone())
     }
 }
 
@@ -49,7 +52,7 @@ impl IntoIterator for TorrentList {
 }
 
 impl FromIterator<Torrent> for TorrentList {
-    fn from_iter<I: IntoIterator<Item=Torrent>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = Torrent>>(iter: I) -> Self {
         let mut c = TorrentList::new();
 
         for i in iter {

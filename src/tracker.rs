@@ -38,7 +38,7 @@ pub enum TrackerScheme {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrackerError {
     InvalidURL { source: url::ParseError },
-    InvalidScheme { scheme: String, },
+    InvalidScheme { scheme: String },
 }
 
 impl std::fmt::Display for TrackerError {
@@ -103,7 +103,9 @@ impl Tracker {
             "wss" => TrackerScheme::Websocket,
             "udp" => TrackerScheme::UDP,
             _ => {
-                return Err(TrackerError::InvalidScheme { scheme: url.scheme().to_string() });
+                return Err(TrackerError::InvalidScheme {
+                    scheme: url.scheme().to_string(),
+                });
             }
         };
 

@@ -27,15 +27,20 @@ impl std::fmt::Display for MagnetLinkError {
         match self {
             MagnetLinkError::InvalidURI { source } => {
                 write!(f, "Invalid URI: {source}")
-            }, MagnetLinkError::InvalidScheme { scheme } => {
+            }
+            MagnetLinkError::InvalidScheme { scheme } => {
                 write!(f, "Invalid URI scheme: {scheme}")
-            }, MagnetLinkError::NoHashFound => {
+            }
+            MagnetLinkError::NoHashFound => {
                 write!(f, "No hash found (only btih/btmh hashes are supported)")
-            }, MagnetLinkError::InvalidHash { source } => {
+            }
+            MagnetLinkError::InvalidHash { source } => {
                 write!(f, "Invalid hash: {source}")
-            }, MagnetLinkError::TooManyHashes { number } => {
+            }
+            MagnetLinkError::TooManyHashes { number } => {
                 write!(f, "Too many hashes ({number})")
-            }, MagnetLinkError::NoNameFound => {
+            }
+            MagnetLinkError::NoNameFound => {
                 write!(f, "No name found")
             }
         }
@@ -65,7 +70,7 @@ impl std::error::Error for MagnetLinkError {
 }
 
 /// A Magnet URI, which contains the infohash(es) but not the entire meta info.
-/// 
+///
 /// The MagnetLink can provide information about the torrent
 /// [`name`](crate::magnet::MagnetLink::name) and [`hash`](crate::magnet::MagnetLink::hash).
 /// Other fields can be contained in the magnet URI, as explained [on Wikipedia](https://en.wikipedia.org/wiki/Magnet_URI_scheme). However,
@@ -95,7 +100,9 @@ impl MagnetLink {
     ///   - the hashes were not valid according to [`InfoHash::new`](crate::hash::InfoHash::new)
     pub fn from_url(u: &Url) -> Result<MagnetLink, MagnetLinkError> {
         if u.scheme() != "magnet" {
-            return Err(MagnetLinkError::InvalidScheme { scheme: u.scheme().to_string() });
+            return Err(MagnetLinkError::InvalidScheme {
+                scheme: u.scheme().to_string(),
+            });
         }
 
         let mut name = String::new();
@@ -112,11 +119,11 @@ impl MagnetLink {
                         // Infohash v2
                         hashes.push(val.strip_prefix("urn:btmh:1220").unwrap().to_string());
                     }
-                }, "dn" => {
-                    name.push_str(&val);
-                }, _ => {
-                    continue
                 }
+                "dn" => {
+                    name.push_str(&val);
+                }
+                _ => continue,
             }
         }
 
@@ -179,18 +186,27 @@ mod tests {
 
     #[test]
     fn can_load_v1() {
-        let magnet_source = std::fs::read_to_string("tests/bittorrent-v1-emma-goldman.magnet").unwrap();
+        let magnet_source =
+            std::fs::read_to_string("tests/bittorrent-v1-emma-goldman.magnet").unwrap();
         let magnet = MagnetLink::new(&magnet_source).unwrap();
-        assert_eq!(magnet.name, "Emma Goldman - Essential Works of Anarchism (16 books)".to_string());
-        assert_eq!(magnet.hash, InfoHash::V1("c811b41641a09d192b8ed81b14064fff55d85ce3".to_string()));
+        assert_eq!(
+            magnet.name,
+            "Emma Goldman - Essential Works of Anarchism (16 books)".to_string()
+        );
+        assert_eq!(
+            magnet.hash,
+            InfoHash::V1("c811b41641a09d192b8ed81b14064fff55d85ce3".to_string())
+        );
     }
 
     #[test]
     fn can_load_hybrid() {
-        let magnet_source = std::fs::read_to_string("tests/bittorrent-v2-hybrid-test.magnet").unwrap();
+        let magnet_source =
+            std::fs::read_to_string("tests/bittorrent-v2-hybrid-test.magnet").unwrap();
         let magnet = MagnetLink::new(&magnet_source).unwrap();
         assert_eq!(magnet.name, "bittorrent-v1-v2-hybrid-test");
-        assert_eq!(magnet.hash,
+        assert_eq!(
+            magnet.hash,
             InfoHash::Hybrid((
                 "631a31dd0a46257d5078c0dee4e66e26f73e42ac".to_string(),
                 "d8dd32ac93357c368556af3ac1d95c9d76bd0dff6fa9833ecdac3d53134efabb".to_string()
@@ -203,12 +219,19 @@ mod tests {
         let magnet_source = std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap();
         let magnet = MagnetLink::new(&magnet_source).unwrap();
         assert_eq!(magnet.name, "bittorrent-v2-test".to_string());
-        assert_eq!(magnet.hash, InfoHash::V2("caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e".to_string()));
+        assert_eq!(
+            magnet.hash,
+            InfoHash::V2(
+                "caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e".to_string()
+            )
+        );
     }
 
     #[test]
     fn fails_load_no_hash() {
-        let res = MagnetLink::new("magnet:?dn=Goldman%2c%20Emma%20-%20Essential%20Works%20of%20Anarchism");
+        let res = MagnetLink::new(
+            "magnet:?dn=Goldman%2c%20Emma%20-%20Essential%20Works%20of%20Anarchism",
+        );
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert_eq!(err, MagnetLinkError::NoHashFound);
@@ -235,9 +258,14 @@ mod tests {
         let res = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce3&dn=Goldman%2c%20Emma%20-%20Essential%20Works%20of%20Anarchism&xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce4");
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert_eq!(err, MagnetLinkError::InvalidHash { source: 
-            InfoHashError::FailedHybrid { hashtype: "V1".to_string() }
-        });
+        assert_eq!(
+            err,
+            MagnetLinkError::InvalidHash {
+                source: InfoHashError::FailedHybrid {
+                    hashtype: "V1".to_string()
+                }
+            }
+        );
     }
 
     #[test]
@@ -246,8 +274,6 @@ mod tests {
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert_eq!(err, MagnetLinkError::TooManyHashes { number: 3 });
-
-
     }
 
     #[test]
@@ -255,9 +281,14 @@ mod tests {
         let res = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85WWW&dn=Goldman%2c%20Emma%20-%20Essential%20Works%20of%20Anarchism");
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert_eq!(err, MagnetLinkError::InvalidHash { source:
-            InfoHashError::InvalidChars { hash: "c811b41641a09d192b8ed81b14064fff55d85WWW".to_string() }
-        });
+        assert_eq!(
+            err,
+            MagnetLinkError::InvalidHash {
+                source: InfoHashError::InvalidChars {
+                    hash: "c811b41641a09d192b8ed81b14064fff55d85WWW".to_string()
+                }
+            }
+        );
     }
 
     #[test]
@@ -265,9 +296,15 @@ mod tests {
         let res = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce311&dn=Goldman%2c%20Emma%20-%20Essential%20Works%20of%20Anarchism");
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert_eq!(err, MagnetLinkError::InvalidHash { source:
-            InfoHashError::InvalidLength { len: 42, hash: "c811b41641a09d192b8ed81b14064fff55d85ce311".to_string() } 
-        });
+        assert_eq!(
+            err,
+            MagnetLinkError::InvalidHash {
+                source: InfoHashError::InvalidLength {
+                    len: 42,
+                    hash: "c811b41641a09d192b8ed81b14064fff55d85ce311".to_string()
+                }
+            }
+        );
     }
 
     #[test]
@@ -275,6 +312,11 @@ mod tests {
         let res = MagnetLink::new("https://fr.wikipedia.org");
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert_eq!(err, MagnetLinkError::InvalidScheme { scheme: "https".to_string() });
+        assert_eq!(
+            err,
+            MagnetLinkError::InvalidScheme {
+                scheme: "https".to_string()
+            }
+        );
     }
 }

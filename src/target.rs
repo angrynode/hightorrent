@@ -154,7 +154,9 @@ mod tests {
 
     #[test]
     fn singletarget_can_be_truncated() {
-        let target = SingleTarget::new("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234").unwrap();
+        let target =
+            SingleTarget::new("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234")
+                .unwrap();
         let truncated = target.truncated();
         assert_eq!(truncated.len(), 40);
         assert_eq!(truncated, "abcdefabcdefabcdefabcdefabcdefabcdefabcd");
