@@ -17,9 +17,6 @@ pub enum MagnetLinkError {
     InvalidHash { source: InfoHashError },
     /// Too many hashes were found in the magnet URI, expected two at most.
     TooManyHashes { number: usize },
-    /// No name was contained in the magnet URI. This is technically allowed by
-    /// some implementations, but should not be encouraged/supported.
-    NoNameFound,
 }
 
 impl std::fmt::Display for MagnetLinkError {
@@ -39,9 +36,6 @@ impl std::fmt::Display for MagnetLinkError {
             }
             MagnetLinkError::TooManyHashes { number } => {
                 write!(f, "Too many hashes ({number})")
-            }
-            MagnetLinkError::NoNameFound => {
-                write!(f, "No name found")
             }
         }
     }
@@ -125,10 +119,6 @@ impl MagnetLink {
                 }
                 _ => continue,
             }
-        }
-
-        if name.len() == 0 {
-            return Err(MagnetLinkError::NoNameFound);
         }
 
         let hashes_len = hashes.len();
@@ -228,6 +218,18 @@ mod tests {
     }
 
     #[test]
+    fn can_load_without_name() {
+        let magnet = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce3").unwrap();
+        assert_eq!(magnet.name, "".to_string());
+        assert_eq!(
+            magnet.hash,
+            InfoHash::V1(
+                "c811b41641a09d192b8ed81b14064fff55d85ce3".to_string()
+            )
+        );
+    }
+
+    #[test]
     fn fails_load_no_hash() {
         let res = MagnetLink::new(
             "magnet:?dn=Goldman%2c%20Emma%20-%20Essential%20Works%20of%20Anarchism",
@@ -235,14 +237,6 @@ mod tests {
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert_eq!(err, MagnetLinkError::NoHashFound);
-    }
-
-    #[test]
-    fn fails_load_no_name() {
-        let res = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce3");
-        assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert_eq!(err, MagnetLinkError::NoNameFound);
     }
 
     #[test]
