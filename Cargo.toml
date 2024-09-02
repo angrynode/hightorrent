@@ -22,3 +22,11 @@ rustc-hex = "2.1"
 serde = { version = "1", features = [ "derive" ] }
 url = "2.5"
 
+[features]
+magnet_force_name = []
+
+[[test]]
+name = "magnet_force_name"
+path = "tests/magnet_force_name.rs"
+required-features = [ "magnet_force_name" ]
+test = true

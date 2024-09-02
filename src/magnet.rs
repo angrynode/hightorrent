@@ -17,6 +17,10 @@ pub enum MagnetLinkError {
     InvalidHash { source: InfoHashError },
     /// Too many hashes were found in the magnet URI, expected two at most.
     TooManyHashes { number: usize },
+    /// No name was contained in the magnet URI. This is technically allowed by
+    /// some implementations, but should not be encouraged/supported.
+    #[cfg(feature="magnet_force_name")]
+    NoNameFound,
 }
 
 impl std::fmt::Display for MagnetLinkError {
@@ -36,6 +40,10 @@ impl std::fmt::Display for MagnetLinkError {
             }
             MagnetLinkError::TooManyHashes { number } => {
                 write!(f, "Too many hashes ({number})")
+            }
+            #[cfg(feature="magnet_force_name")]
+            MagnetLinkError::NoNameFound => {
+                write!(f, "No name found")
             }
         }
     }
@@ -121,6 +129,11 @@ impl MagnetLink {
             }
         }
 
+        #[cfg(feature = "magnet_force_name")]
+        if name.len() == 0 {
+            return Err(MagnetLinkError::NoNameFound);
+        }
+
         let hashes_len = hashes.len();
 
         if hashes_len == 0 {
@@ -159,7 +172,9 @@ impl MagnetLink {
     }
 
     /// Returns the torrent name contained in the MagnetLink. If multiple names are contained in the URL,
-    /// they will all be appended.
+    /// they will all be appended. If no name is contained in the magnet link, the result of this function will be empty.
+    /// However, when the `magnet_force_name` feature is enabled, the `MagnetLink` creation will have errored when the name
+    /// is not provided and so this function is guaranteed to return an actual name.
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -218,6 +233,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature="magnet_force_name"))]
     fn can_load_without_name() {
         let magnet = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce3").unwrap();
         assert_eq!(magnet.name, "".to_string());
