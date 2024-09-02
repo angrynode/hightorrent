@@ -147,7 +147,7 @@ impl TryFrom<&str> for MultiTarget {
     type Error = InfoHashError;
 
     fn try_from(value: &str) -> Result<MultiTarget, Self::Error> {
-        MultiTarget::from_str(&value)
+        MultiTarget::from_str(value)
     }
 }
 

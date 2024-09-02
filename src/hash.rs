@@ -109,16 +109,16 @@ impl InfoHash {
     /// hash is used.
     pub fn as_str(&self) -> &str {
         match &self {
-            Self::V1(s) => &s,
-            Self::V2(s) => &s,
-            Self::Hybrid((_h1, h2)) => &h2,
+            Self::V1(s) => s,
+            Self::V2(s) => s,
+            Self::Hybrid((_h1, h2)) => h2,
         }
     }
 
     /// Returns a [`TorrentID`](crate::id::TorrentID) for the InfoHash. This is either the
     /// infohash v1, or the infohash v2 truncated to 40 characters for v2/hybrid infohash.
     pub fn id(&self) -> TorrentID {
-        TorrentID::from_infohash(&self)
+        TorrentID::from_infohash(self)
     }
 }
 
@@ -159,7 +159,7 @@ impl TryInfoHash for InfoHash {
 
 impl TryInfoHash for &InfoHash {
     fn try_infohash(&self) -> Result<InfoHash, InfoHashError> {
-        Ok(InfoHash::new(self.as_str())?)
+        InfoHash::new(self.as_str())
     }
 }
 

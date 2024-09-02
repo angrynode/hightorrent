@@ -3,8 +3,8 @@ use serde::Deserialize;
 use crate::{InfoHash, TorrentID};
 
 /// Turn a backend-specific torrent into an agnostic [`Torrent`](crate::torrent::Torrent).
-pub trait IntoTorrent {
-    fn into_torrent(&self) -> Torrent;
+pub trait ToTorrent {
+    fn to_torrent(&self) -> Torrent;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
