@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version UNRELEASED (XXXX-YY-ZZ)
 
+### Fixed
+
+- `SingleTarget::new` now normalizes the requested hash just like `InfoHash` does, to avoid issues when
+  dealing with different casing
+
 ## Version 0.1.0 (2022-12-22)
 
 ### Added
