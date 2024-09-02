@@ -195,4 +195,18 @@ mod tests {
                 .unwrap()
         );
     }
+
+    #[test]
+    fn epic_fail_test() {
+        let list = dummy_list();
+        let target = SingleTarget::new("DERPe1c30e81cb361b9ee167c4aa64228a7fa4fa").unwrap();
+
+        let found = list.get(&target).unwrap();
+
+        assert_eq!(
+            found.hash,
+            InfoHash::new("caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e")
+                .unwrap()
+        );
+    }
 }

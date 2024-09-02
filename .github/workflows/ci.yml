@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'src'
-      - 'tests'
+      - 'src/**'
+      - 'tests/**'
 
 env:
   CARGO_TERM_COLOR: always
