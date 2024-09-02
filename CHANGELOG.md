@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `SingleTarget::matches_hash` compares a single target request with a given `InfoHash` ([#5](https://github.com/angrynode/hightorrent/pull/5))
 
+### Changed
+
+- `MagnetLink` can now be built with no `dn` (magnet name), unless the `magnet_force_name` crate feature is enabled ([#6](https://github.com/angrynode/hightorrent/pull/6))
+
 ### Fixed
 
 - `TorrentList::get` now properly matches truncated V2 hash requests ([#5](https://github.com/angrynode/hightorrent/pull/5))
