@@ -25,7 +25,8 @@ impl SingleTarget {
     /// be parsed as an InfoHash (wrong characters / length).
     pub fn new(hash: &str) -> Result<SingleTarget, InfoHashError> {
         // Check that the passed string looks like a infohash
-        let _ = InfoHash::new(hash)?;
+        let hash = InfoHash::new(hash)?;
+        // Use the produced normalized (lowercase) hash
         Ok(SingleTarget(hash.to_string()))
     }
 
@@ -160,5 +161,15 @@ mod tests {
         let truncated = target.truncated();
         assert_eq!(truncated.len(), 40);
         assert_eq!(truncated, "abcdefabcdefabcdefabcdefabcdefabcdefabcd");
+    }
+
+    #[test]
+    fn singletarget_ignores_casing() {
+        assert_eq!(
+            SingleTarget::new("ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF1234")
+                .unwrap(),
+            SingleTarget::new("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234")
+                .unwrap()
+        );
     }
 }
