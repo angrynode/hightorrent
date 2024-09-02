@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `IntoTorrent` trait has been renamed `ToTorrent`, and the associated method is now `to_torrent` ([#8](https://github.com/angrynode/hightorrent/pull/8))
-- `MagnetLink` can now be built with no `dn` (magnet name), unless the `magnet_force_name` crate feature is enabled ([#6](https://github.com/angrynode/hightorrent/pull/6))
+- `MagnetLink` can now be built with no `dn` (magnet name), unless the `magnet_force_name` crate feature is enabled ([#7](https://github.com/angrynode/hightorrent/pull/7))
 
 ### Fixed
 
