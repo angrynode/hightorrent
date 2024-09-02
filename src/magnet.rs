@@ -19,7 +19,7 @@ pub enum MagnetLinkError {
     TooManyHashes { number: usize },
     /// No name was contained in the magnet URI. This is technically allowed by
     /// some implementations, but should not be encouraged/supported.
-    #[cfg(feature="magnet_force_name")]
+    #[cfg(feature = "magnet_force_name")]
     NoNameFound,
 }
 
@@ -41,7 +41,7 @@ impl std::fmt::Display for MagnetLinkError {
             MagnetLinkError::TooManyHashes { number } => {
                 write!(f, "Too many hashes ({number})")
             }
-            #[cfg(feature="magnet_force_name")]
+            #[cfg(feature = "magnet_force_name")]
             MagnetLinkError::NoNameFound => {
                 write!(f, "No name found")
             }
@@ -233,15 +233,15 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature="magnet_force_name"))]
+    #[cfg(not(feature = "magnet_force_name"))]
     fn can_load_without_name() {
-        let magnet = MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce3").unwrap();
+        let magnet =
+            MagnetLink::new("magnet:?xt=urn:btih:c811b41641a09d192b8ed81b14064fff55d85ce3")
+                .unwrap();
         assert_eq!(magnet.name, "".to_string());
         assert_eq!(
             magnet.hash,
-            InfoHash::V1(
-                "c811b41641a09d192b8ed81b14064fff55d85ce3".to_string()
-            )
+            InfoHash::V1("c811b41641a09d192b8ed81b14064fff55d85ce3".to_string())
         );
     }
 

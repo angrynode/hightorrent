@@ -180,9 +180,7 @@ mod tests {
     #[test]
     fn matches_v2_truncated() {
         let list = dummy_list();
-        let target =
-            SingleTarget::new("caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa")
-                .unwrap();
+        let target = SingleTarget::new("caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa").unwrap();
 
         let found = list.get(&target).unwrap();
 
