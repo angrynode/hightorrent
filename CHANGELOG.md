@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version UNRELEASED (XXXX-YY-ZZ)
 
+### Added
+
+- `SingleTarget::matches_hash` compares a single target request with a given `InfoHash`
+
 ### Fixed
 
+- `TorrentList::get` now properly matches truncated V2 hash requests
 - `SingleTarget::new` now normalizes the requested hash just like `InfoHash` does, to avoid issues when
   dealing with different casing
 

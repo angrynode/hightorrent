@@ -27,3 +27,23 @@ pub struct Torrent {
     /// v1 infohash is untouched, v2 infohash of the hybrid/v2 torrent is truncated to the first 40 chars
     pub id: TorrentID,
 }
+
+impl Torrent {
+    /// This method is only used for tests. It will not have any useful information
+    /// except for the hash and id.
+    #[allow(dead_code)]
+    pub(crate) fn dummy_from_hash(hash: &InfoHash) -> Torrent {
+        Torrent {
+            name: String::new(),
+            path: String::new(),
+            date_start: 0,
+            date_end: 0,
+            progress: 0,
+            size: 0,
+            state: String::new(),
+            tags: Vec::new(),
+            hash: hash.clone(),
+            id: hash.id(),
+        }
+    }
+}

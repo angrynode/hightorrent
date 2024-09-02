@@ -42,6 +42,22 @@ impl SingleTarget {
     pub fn truncated(&self) -> &str {
         self.as_str().get(0..40).unwrap()
     }
+
+    /// Returns whether the SingleTarget matches a given [InfoHash]
+    pub fn matches_hash(&self, hash: &InfoHash) -> bool {
+        match hash {
+            InfoHash::V1(h) => h.as_str() == self.as_str(),
+            InfoHash::Hybrid((v1, _v2)) => {
+                // Priority is given to matching v2, for more resilience to collision attacks
+                // but we can still match hybrid by infohash v1 SingleTarget
+                hash.id().as_str() == self.truncated() || v1 == self.as_str()
+            }
+            InfoHash::V2(h) => {
+                // For infohash v2 we check full form, but also truncated hash form
+                h.as_str() == self.as_str() || hash.id().as_str() == self.as_str()
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for SingleTarget {
