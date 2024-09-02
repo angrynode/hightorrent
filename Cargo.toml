@@ -1,7 +1,7 @@
 [package]
 name = "hightorrent"
 description = "High-level torrent library which supports Bittorrent v1, v2 and hybrid torrents"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = [ "angrynode <angrynode@kl.netlib.re>" ]
 documentation = "https://docs.rs/hightorrent"
