@@ -117,7 +117,7 @@ impl Tracker {
 
     /// Turns a centralized Tracker into a wider PeerSource
     pub fn to_peer_source(&self) -> PeerSource {
-        PeerSource::from_tracker(&self)
+        PeerSource::from_tracker(self)
     }
 }
 

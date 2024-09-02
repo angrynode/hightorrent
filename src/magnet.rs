@@ -97,7 +97,7 @@ impl MagnetLink {
     ///   - the scheme is not `magnet`
     ///   - there is no name (`dn` URL param)
     ///   - no hash was found (`xt` URL param, with `urn:btih:` prefix for v1 infohash,
-    ///   `urn:btmh:1220` for v2 infohash)
+    ///     `urn:btmh:1220` for v2 infohash)
     ///   - more than one hash of the same type was found
     ///   - the hashes were not valid according to [`InfoHash::new`](crate::hash::InfoHash::new)
     pub fn from_url(u: &Url) -> Result<MagnetLink, MagnetLinkError> {
@@ -154,9 +154,9 @@ impl MagnetLink {
         // If we still have two hashes not just one, we should combine them into hybrid
         // Otherwise we just return the first and only infohash found
         let final_hash = if valid_hashes.len() == 1 {
-            valid_hashes.get(0).unwrap().clone()
+            valid_hashes.first().unwrap().clone()
         } else {
-            let (hash1, hash2) = (valid_hashes.get(0).unwrap(), valid_hashes.get(1).unwrap());
+            let (hash1, hash2) = (valid_hashes.first().unwrap(), valid_hashes.get(1).unwrap());
             hash1.hybrid(hash2)?
         };
 

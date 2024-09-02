@@ -31,7 +31,7 @@ mod magnet;
 pub use magnet::{MagnetLink, MagnetLinkError};
 
 mod torrent;
-pub use torrent::{IntoTorrent, Torrent};
+pub use torrent::{ToTorrent, Torrent};
 
 mod torrent_file;
 pub use torrent_file::{TorrentFile, TorrentFileError};
