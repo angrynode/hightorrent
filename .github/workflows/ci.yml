@@ -12,13 +12,14 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   RUSTFLAGS: "-Dwarnings"
+  RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
       - name: Test default features
         run: cargo test
@@ -26,3 +27,7 @@ jobs:
         run: cargo test --all-targets all-features
       - name: Lint
         run: cargo clippy --all-targets --all-features
+      - name: Test documentation default features
+        run: cargo doc -Zrustdoc-map
+      - name: Test documentation optional features
+        run: cargo doc -Zrustdoc-map --all-features
