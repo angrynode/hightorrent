@@ -130,7 +130,7 @@ impl MagnetLink {
         }
 
         #[cfg(feature = "magnet_force_name")]
-        if name.len() == 0 {
+        if name.is_empty() {
             return Err(MagnetLinkError::NoNameFound);
         }
 
