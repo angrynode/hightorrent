@@ -1,29 +1,25 @@
 # HighTorrent
 
-<!-- cargo-sync-readme start -->
+<!-- cargo-rdme start -->
 
 HighTorrent is a library which contains high-level data structures and functions
-to study and interact with Bittorrent v1 and v2 torrents. HighTorrent does not aim to be featureful,
+to interact with Bittorrent v1 and v2 torrents. HighTorrent does not aim to be featureful,
 but rather to be super easy to use and interoperate with more advanced torrent software,
 and completely impossible to misuse.
 
 **Note that HighTorrent is not a networked library. It will not provide any utilities for
 querying the DHT and/or downloading torrents. HighTorrent is much lower in the stack.**
 
-We mostly provide utilities to extract name and hash from torrents/magnets, using the
-[`MagnetLink`](https://docs.rs/hightorrent/latest/hightorrent/magnet/struct.MagnetLink.html) and [`TorrentFile`](https://docs.rs/hightorrent/latest/hightorrent/torrent_file/struct.TorrentFile.html) structures, but could provide more advanced utilities in the future (PRs welcome).
-
-Additionally, we provide the [`Torrent`](https://docs.rs/hightorrent/latest/hightorrent/torrent/struct.Torrent.html) struct and the
-[`IntoTorrent`](https://docs.rs/hightorrent/latest/hightorrent/torrent/trait.IntoTorrent.html) trait representing fully-loaded torrents. These
-helpers are intended to be used by more diverse torrenting libraries to provide
-interoperability out-of-the-box.
+HighTorrent provides utilities to extract name and hash from torrents/magnets, using the
+[`MagnetLink`](https://docs.rs/hightorrent/latest/hightorrent/magnet/struct.MagnetLink.html) and [`TorrentFile`](https://docs.rs/hightorrent/latest/hightorrent/torrent_file/struct.TorrentFile.html) structures, but could provide more advanced utilities in the future (PRs welcome). Additionally, it provides the [`Torrent`](https://docs.rs/hightorrent/latest/hightorrent/torrent/struct.Torrent.html) struct and the
+[`ToTorrent`](https://docs.rs/hightorrent/latest/hightorrent/torrent/trait.ToTorrent.html) trait representing fully-loaded torrents ; those helpers are intended to be used by more diverse torrenting libraries to provide interoperability out-of-the-box.
 
 Finally, the [`SingleTarget`](https://docs.rs/hightorrent/latest/hightorrent/target/struct.SingleTarget.html) and
 [`MultiTarget`](https://docs.rs/hightorrent/latest/hightorrent/target/enum.MultiTarget.html) structures represent one or more torrents you wish to
 interact with. The contained stringy value is ambiguous, and can represent either a precise
 [`InfoHash`](https://docs.rs/hightorrent/latest/hightorrent/hash/enum.InfoHash.html) or a libtorrent-compatible [`TorrentID`](https://docs.rs/hightorrent/latest/hightorrent/id/struct.TorrentID.html) (truncated hash).
 
-<!-- cargo-sync-readme end -->
+<!-- cargo-rdme end -->
 
 # Related projects
 
