@@ -29,6 +29,16 @@ Do you know other related Rust projects? Please let us know.
 
 This library was developed as part of the TorrentManager project, because there was no high-level library to read magnet links and torrent files that would support Bittorrent v2 torrents. New features will be added as they are required by the larger project, but suggestions are welcome if this library can benefit other people and projects as well.
 
+# Contribution
+
+Contributions are welcome. Here are the steps to make sure your contribution gets merged:
+
+- open a PR on [Github angrynode/hightorrent](https://github.com/angrynode/hightorrent/).
+- make sure tests pass with `just check`; it's running more steps than just `cargo test`
+- if you changed the Rust crate docs, don't forget to run `cargo rdme` to update the README
+
+If you don't have those dependencies (`just`, `cargo-rdme`), you can setup a temporary development environment with [Nix](https://nixos.org/) by running `nix develop`.
+
 # Possible improvements for v1
 
 - [x] hand-implement errors to remove snafu dependency
