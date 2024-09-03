@@ -28,7 +28,8 @@ impl TorrentList {
     pub fn get(&self, target: &SingleTarget) -> Option<Torrent> {
         self.0
             .iter()
-            .find(|t| target.matches_hash(&t.hash)).cloned()
+            .find(|t| target.matches_hash(&t.hash))
+            .cloned()
     }
 }
 
