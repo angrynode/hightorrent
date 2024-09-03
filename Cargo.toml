@@ -10,6 +10,10 @@ rust-version = "1.64"
 readme = "README.md"
 license = "AGPL-3.0-only"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [lib]
 name = "hightorrent"
 path = "src/lib.rs"

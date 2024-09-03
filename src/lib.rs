@@ -15,6 +15,8 @@
 //! interact with. The contained stringy value is ambiguous, and can represent either a precise
 //! [`InfoHash`](crate::hash::InfoHash) or a libtorrent-compatible [`TorrentID`](crate::id::TorrentID) (truncated hash).
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
 #[macro_use]
 extern crate serde;
 
