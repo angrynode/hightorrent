@@ -9,7 +9,7 @@ pub trait ToTorrent {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// An abstract torrent, loaded from any backend that implements
-/// [IntoTorrent](crate::torrent::IntoTorrent).
+/// [ToTorrent](crate::torrent::ToTorrent).
 pub struct Torrent {
     //pub hash: TruncatedHash,
     pub name: String,

@@ -8,7 +8,7 @@
 //!
 //! HighTorrent provides utilities to extract name and hash from torrents/magnets, using the
 //! [`MagnetLink`](crate::magnet::MagnetLink) and [`TorrentFile`](crate::torrent_file::TorrentFile) structures, but could provide more advanced utilities in the future (PRs welcome). Additionally, it provides the [`Torrent`](crate::torrent::Torrent) struct and the
-//! [`IntoTorrent`](crate::torrent::IntoTorrent) trait representing fully-loaded torrents ; those helpers are intended to be used by more diverse torrenting libraries to provide interoperability out-of-the-box.
+//! [`ToTorrent`](crate::torrent::ToTorrent) trait representing fully-loaded torrents ; those helpers are intended to be used by more diverse torrenting libraries to provide interoperability out-of-the-box.
 //!
 //! Finally, the [`SingleTarget`](crate::target::SingleTarget) and
 //! [`MultiTarget`](crate::target::MultiTarget) structures represent one or more torrents you wish to
@@ -16,6 +16,7 @@
 //! [`InfoHash`](crate::hash::InfoHash) or a libtorrent-compatible [`TorrentID`](crate::id::TorrentID) (truncated hash).
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![allow(rustdoc::redundant_explicit_links)]
 
 #[macro_use]
 extern crate serde;
