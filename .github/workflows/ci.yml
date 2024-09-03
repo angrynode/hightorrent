@@ -23,6 +23,6 @@ jobs:
       - name: Test default features
         run: cargo test
       - name: Test optional features
-        run: cargo test --all-target all-features
+        run: cargo test --all-targets all-features
       - name: Lint
         run: cargo clippy --all-targets --all-features
