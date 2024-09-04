@@ -24,15 +24,4 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Check formatting
-        run: cargo fmt --check
-      - name: Test default features
-        run: cargo test
-      - name: Test optional features
-        run: cargo test --all-targets all-features
-      - name: Lint
-        run: cargo clippy --all-targets --all-features
-      - name: Test documentation default features
-        run: cargo doc -Zrustdoc-map
-      - name: Test documentation optional features
-        run: cargo doc -Zrustdoc-map --all-features
+      - run: ./scripts/pre-commit.sh

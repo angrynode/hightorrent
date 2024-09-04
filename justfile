@@ -4,10 +4,7 @@ RUSTFLAGS := "-Dwarnings"
 RUSTDOCFLAGS := "--cfg docs -Dwarnings"
 
 check *FLAGS:
-    cargo fmt --check
-    cargo test
-    cargo test --all-targets --all-features
-    cargo doc -Zrustdoc-map --all-features
+    ./scripts/pre-commit.sh {{FLAGS}}
 
 doc *FLAGS:
     cargo +nightly doc -Zrustdoc-map --all-features {{FLAGS}}
