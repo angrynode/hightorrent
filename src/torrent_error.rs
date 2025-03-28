@@ -48,6 +48,8 @@ pub enum TorrentError {
     MismatchedMagnetHashType { hash: String, hash_type: String },
     #[snafu(display("Unsupported magnet hash type: {}", hash_type))]
     UnsupportedMagnetHashType { hash_type: String },
+    #[snafu(display("Invalid content file path in torrent: {}", String))]
+    InvalidContentPath { path: String },
 }
 
 impl From<crate::info_hash::InfoHashError> for TorrentError {

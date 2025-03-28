@@ -4,8 +4,14 @@ use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
-use crate::{InfoHash, InfoHashError, TorrentID};
+use crate::{InfoHash, InfoHashError, TorrentContent, TorrentID};
+
+/// Maximum size of the `piece length` entry in info dict for V2 torrents.
+///
+/// Magic number copied over [from libtorrent](https://github.com/arvidn/libtorrent/blob/1b9dc7462f22bc1513464d01c72281280a6a5f97/include/libtorrent/file_storage.hpp#L246).
+pub const MAXIMUM_PIECE_LENGTH: u32 = 536854528;
 
 /// Error occurred during parsing a [`TorrentFile`](crate::torrent_file::TorrentFile).
 #[derive(Clone, Debug, PartialEq)]
@@ -16,6 +22,9 @@ pub enum TorrentFileError {
     NotATorrent { reason: String },
     WrongVersion { version: u64 },
     InvalidHash { source: InfoHashError },
+    InvalidContentPath { path: String },
+    MissingPieceLength,
+    BadPieceLength { piece_length: u32 },
 }
 
 impl std::fmt::Display for TorrentFileError {
@@ -32,6 +41,15 @@ impl std::fmt::Display for TorrentFileError {
                 "Wrong torrent version: {version}, only v1 and v2 are supported)"
             ),
             TorrentFileError::InvalidHash { source } => write!(f, "Invalid hash: {source}"),
+            TorrentFileError::InvalidContentPath { path } => {
+                write!(f, "Invalid content file path in torrent: {path}")
+            }
+            TorrentFileError::MissingPieceLength => {
+                write!(f, "No \'piece length\' field found in info dict")
+            }
+            TorrentFileError::BadPieceLength { piece_length } => {
+                write!(f, "Torrent \'piece length\' is too big: {}", piece_length)
+            }
         }
     }
 }
@@ -66,12 +84,12 @@ impl std::error::Error for TorrentFileError {
 /// [`name`](crate::torrent_file::TorrentFile::name) and
 /// [`hash`](crate::torrent_file::TorrentFile::hash). Other fields could be supported, but are not
 /// currently implemented by this library.
-///
-/// TODO: Implement files() method to return list of files
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TorrentFile {
-    hash: InfoHash,
-    name: String,
+    pub hash: InfoHash,
+    pub name: String,
+    // Kept for further analysis
+    pub decoded: DecodedTorrent,
 }
 
 /// A parsed bencode-decoded value, to ensure torrent-like structure.
@@ -89,6 +107,98 @@ pub struct DecodedTorrent {
     extra: HashMap<String, BencodeValue>,
 }
 
+impl DecodedTorrent {
+    pub fn files(&self) -> Result<Vec<TorrentContent>, TorrentFileError> {
+        if self.info.files.is_none() {
+            if self.info.file_tree.is_none() {
+                // V1 torrent with single file
+                Ok(vec![TorrentContent {
+                    path: PathBuf::from(&self.info.name),
+                    size: self.info.length.unwrap(),
+                }])
+            } else {
+                todo!("v2 torrent files");
+            }
+        } else {
+            // V1 torrent with multiple files
+            let mut files: Vec<TorrentContent> = vec![];
+            for file in self.info.files.as_ref().unwrap() {
+                // TODO: error
+                let f: UnsafeV1FileContent = bt_bencode::from_value(file.clone()).unwrap();
+                if let Some(parsed_file) = f.to_torrent_content()? {
+                    files.push(parsed_file);
+                }
+            }
+
+            // Sort files by alphabetical order
+            files.sort();
+            Ok(files)
+        }
+    }
+}
+
+/// Raw file path described within a Bittorrent v1 torrent file.
+///
+/// It has not been sanitized, for example to prevent path traversal attacks. You should not be using this in your API;
+/// use [TorrentContent] instead.
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
+pub struct UnsafeV1FileContent {
+    /// Raw path segments from the torrent, may contain directory escapes (like `..`)
+    #[serde(rename = "path")]
+    pub raw_paths: Vec<String>,
+    /// File length in bytes
+    pub length: u64,
+    /// Extended file attributes as defined in [BEP-0047](https://www.bittorrent.org/beps/bep_0047.html)
+    ///
+    /// Can contain several characters:
+    ///
+    /// - p for padding files
+    /// - l for symlinks
+    /// - x for executables
+    /// - h for hidden files
+    #[serde(default)]
+    pub attr: String,
+}
+
+impl UnsafeV1FileContent {
+    /// Tries to parse [TorrentContent].
+    ///
+    /// Fails if the data is invalid (eg. path traversal), produces
+    /// Ok(None) when the file is a padding file.
+    pub fn to_torrent_content(&self) -> Result<Option<TorrentContent>, TorrentFileError> {
+        if self.attr.contains('p') {
+            return Ok(None);
+        }
+
+        // Parse the raw path parts omitting weird directory shenanigans
+        let mut path = PathBuf::new();
+        for p in &self.raw_paths {
+            if p.contains('/') {
+                return Err(TorrentFileError::InvalidContentPath {
+                    path: p.to_string(),
+                });
+            }
+
+            if p == ".." {
+                return Err(TorrentFileError::InvalidContentPath {
+                    path: p.to_string(),
+                });
+            }
+
+            if p == "." {
+                continue;
+            }
+
+            path.push(p);
+        }
+
+        Ok(Some(TorrentContent {
+            path,
+            size: self.length,
+        }))
+    }
+}
+
 /// An info dict contained in a [`DecodedTorrent`](crate::torrent_file::DecodedTorrent).
 ///
 /// Only cares about torrent version, name, and files, but other fields are preseved in an `extra`
@@ -102,6 +212,10 @@ pub struct DecodedInfo {
     version: Option<u64>,
 
     name: String,
+
+    /// Torrent `piece length` as used in v1/v2 torrents
+    #[serde(rename = "piece length")]
+    piece_length: u32,
 
     // Torrent v1/hybrid (only for single-file torrents)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -173,9 +287,19 @@ impl TorrentFile {
             }
         };
 
+        // Sanitize piece length (TODO: make this in type)
+        if let Some(2) = &torrent.info.version {
+            if torrent.info.piece_length > MAXIMUM_PIECE_LENGTH {
+                return Err(TorrentFileError::BadPieceLength {
+                    piece_length: torrent.info.piece_length,
+                });
+            }
+        }
+
         Ok(TorrentFile {
-            name: torrent.info.name,
+            name: torrent.info.name.clone(),
             hash: infohash,
+            decoded: torrent,
         })
     }
 
@@ -211,6 +335,75 @@ mod tests {
             torrent.hash,
             InfoHash::V1("c811b41641a09d192b8ed81b14064fff55d85ce3".to_string())
         );
+        assert_eq!(torrent.decoded.files().unwrap().len(), 94);
+    }
+
+    #[test]
+    fn can_read_torrent_v1_multifile() {
+        let slice = std::fs::read("tests/libtorrent/good/sample.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        println!("{:?}", res);
+        assert!(res.is_ok());
+        let torrent = res.unwrap();
+        assert_eq!(&torrent.name, "sample");
+        assert_eq!(
+            torrent.hash,
+            InfoHash::V1("58d8d15a4eb3bd9afabc9cee2564f78192777edb".to_string())
+        );
+        assert_eq!(
+            torrent.decoded.files().unwrap(),
+            vec!(
+                TorrentContent {
+                    path: PathBuf::from("text_file.txt"),
+                    size: 20,
+                },
+                TorrentContent {
+                    path: PathBuf::from("text_file2.txt"),
+                    size: 25,
+                }
+            ),
+        );
+    }
+
+    #[test]
+    fn can_read_torrent_v1_wrongpath() {
+        let slice = std::fs::read("tests/libtorrent/good/parent_path.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        println!("{:?}", res);
+        assert!(res.is_ok());
+        let torrent = res.unwrap();
+        assert_eq!(&torrent.name, "temp");
+        assert_eq!(
+            torrent.hash,
+            InfoHash::V1("9e1111f1ee4966f7d06d398f1d58e00ad150657a".to_string())
+        );
+        assert_eq!(
+            torrent.decoded.files().unwrap_err(),
+            TorrentFileError::InvalidContentPath {
+                path: "..".to_string()
+            },
+        );
+    }
+
+    #[test]
+    fn can_read_torrent_v1_singlepath() {
+        let slice = std::fs::read("tests/libtorrent/good/base.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        println!("{:?}", res);
+        assert!(res.is_ok());
+        let torrent = res.unwrap();
+        assert_eq!(&torrent.name, "temp");
+        assert_eq!(
+            torrent.hash,
+            InfoHash::V1("c0fda1edafdbdbb96443424e0b3899af7159d10e".to_string())
+        );
+        assert_eq!(
+            torrent.decoded.files().unwrap(),
+            vec!(TorrentContent {
+                path: PathBuf::from("temp"),
+                size: 425,
+            }),
+        );
     }
 
     #[test]
@@ -242,5 +435,19 @@ mod tests {
                 "d8dd32ac93357c368556af3ac1d95c9d76bd0dff6fa9833ecdac3d53134efabb".to_string()
             ))
         );
+    }
+
+    #[test]
+    fn v1_piece_len() {
+        let slice = std::fs::read("tests/libtorrent/bad/negative_piece_len.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn v2_piece_len() {
+        let slice = std::fs::read("tests/libtorrent/bad/v2_piece_size.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        assert!(res.is_err());
     }
 }

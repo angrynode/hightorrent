@@ -39,6 +39,10 @@ Contributions are welcome. Here are the steps to make sure your contribution get
 
 If you don't have those dependencies (`just`, `cargo-rdme`), you can setup a temporary development environment with [Nix](https://nixos.org/) by running `nix develop`.
 
+# Running tests
+
+From the repository root, run `cargo test`. To run advanced tests using rust nightly as used in CI, run `scripts/pre-commit.sh`. To run the test verifying that error cases from libtorrent are properly handled (which is normally ignored), run `cargo test -- --ignored`.
+
 # Possible improvements for v1
 
 - [x] hand-implement errors to remove snafu dependency
@@ -48,6 +52,7 @@ If you don't have those dependencies (`just`, `cargo-rdme`), you can setup a tem
 - [ ] implement MultiTarget filtering, including boolean logic (AND/OR/XOR)
 - [ ] provide more information for TorrentFile (eg. files list)
 - [ ] consider replacing Torrent with a trait
+- [ ] implement more libtorrent tests (28/41 wrongful successes as of 03/28/2025)
 
 # License
 

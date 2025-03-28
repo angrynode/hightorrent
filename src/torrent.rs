@@ -2,6 +2,8 @@ use serde::Deserialize;
 
 use crate::{InfoHash, TorrentID};
 
+use std::path::PathBuf;
+
 /// Turn a backend-specific torrent into an agnostic [`Torrent`](crate::torrent::Torrent).
 pub trait ToTorrent {
     fn to_torrent(&self) -> Torrent;
@@ -11,7 +13,6 @@ pub trait ToTorrent {
 /// An abstract torrent, loaded from any backend that implements
 /// [ToTorrent](crate::torrent::ToTorrent).
 pub struct Torrent {
-    //pub hash: TruncatedHash,
     pub name: String,
     pub path: String,
     pub date_start: i64,
@@ -45,5 +46,32 @@ impl Torrent {
             hash: hash.clone(),
             id: hash.id(),
         }
+    }
+}
+
+pub trait ToTorrentContent {
+    fn to_torrent_content(&self) -> TorrentContent;
+}
+
+/// A file contained inside a [Torrent].
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct TorrentContent {
+    /// File path, relative from the torrent root.
+    pub path: PathBuf,
+    /// Size of the file in bytes,
+    pub size: u64,
+}
+
+impl std::cmp::PartialOrd for TorrentContent {
+    // Sort by alphabetical order
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::Ord for TorrentContent {
+    // Sort by alphabetical order
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.path.cmp(&other.path)
     }
 }
