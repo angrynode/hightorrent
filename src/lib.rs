@@ -33,6 +33,9 @@ pub use list::TorrentList;
 mod magnet;
 pub use magnet::{MagnetLink, MagnetLinkError};
 
+mod piece_length;
+pub use piece_length::{PieceLength, PIECE_LENGTH_MAXIMUM};
+
 mod torrent;
 pub use torrent::{ToTorrent, ToTorrentContent, Torrent, TorrentContent};
 

@@ -6,12 +6,7 @@ use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::{InfoHash, InfoHashError, TorrentContent, TorrentID};
-
-/// Maximum size of the `piece length` entry in info dict for V2 torrents.
-///
-/// Magic number copied over [from libtorrent](https://github.com/arvidn/libtorrent/blob/1b9dc7462f22bc1513464d01c72281280a6a5f97/include/libtorrent/file_storage.hpp#L246).
-pub const MAXIMUM_PIECE_LENGTH: u32 = 536854528;
+use crate::{InfoHash, InfoHashError, PieceLength, TorrentContent, TorrentID};
 
 /// Error occurred during parsing a [`TorrentFile`](crate::torrent_file::TorrentFile).
 #[derive(Clone, Debug, PartialEq)]
@@ -215,7 +210,7 @@ pub struct DecodedInfo {
 
     /// Torrent `piece length` as used in v1/v2 torrents
     #[serde(rename = "piece length")]
-    piece_length: u32,
+    piece_length: PieceLength,
 
     // Torrent v1/hybrid (only for single-file torrents)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -286,15 +281,6 @@ impl TorrentFile {
                 });
             }
         };
-
-        // Sanitize piece length (TODO: make this in type)
-        if let Some(2) = &torrent.info.version {
-            if torrent.info.piece_length > MAXIMUM_PIECE_LENGTH {
-                return Err(TorrentFileError::BadPieceLength {
-                    piece_length: torrent.info.piece_length,
-                });
-            }
-        }
 
         Ok(TorrentFile {
             name: torrent.info.name.clone(),
