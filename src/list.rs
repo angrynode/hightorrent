@@ -48,6 +48,16 @@ impl IntoIterator for TorrentList {
     }
 }
 
+impl<'a> IntoIterator for &'a TorrentList {
+    type Item = &'a Torrent;
+    type IntoIter = <&'a Vec<Torrent> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        //self.0.as_ref().into_iter()
+        <&'a Vec<Torrent> as IntoIterator>::into_iter(&self.0)
+    }
+}
+
 impl FromIterator<Torrent> for TorrentList {
     fn from_iter<I: IntoIterator<Item = Torrent>>(iter: I) -> Self {
         let mut c = TorrentList::new();
@@ -195,5 +205,28 @@ mod tests {
             InfoHash::new("caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e")
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn can_iterate_owned_list() {
+        let list = dummy_list();
+
+        for _torrent in list {
+            continue;
+        }
+    }
+
+    #[test]
+    fn can_iterate_borrowed_list() {
+        let list = dummy_list();
+
+        for _torrent in &list {
+            continue;
+        }
+
+        // Make sure list was not consumed
+        for _torrent in &list {
+            continue;
+        }
     }
 }

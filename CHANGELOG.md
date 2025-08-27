@@ -14,6 +14,7 @@ This release focuses on supporting listing files contained in torrents. This is 
 - `DecodedInfo.piece_length` contains the torrent piece length in bytes, with a maximum supported size of `536854528` like in libtorrent
 - `TorrentContent` represents a file in a torrent ; `ToTorrentContent` is a trait enabling specialized representations to be turned into a backend-agnostic `TorrentContent` ; padding files are ignored when producing a list of content files
 - `DecodedTorrent::files()` produces the file list in the torrent (only v1 torrents supported for now)
+- `IntoIterator` is now implemented for `&TorrentList`
 
 ### Changed
 

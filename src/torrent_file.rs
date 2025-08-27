@@ -209,6 +209,8 @@ pub struct DecodedInfo {
     name: String,
 
     /// Torrent `piece length` as used in v1/v2 torrents
+    ///
+    /// Maximum size is 536854528 like in libtorrent.
     #[serde(rename = "piece length")]
     piece_length: PieceLength,
 
