@@ -9,6 +9,7 @@ keywords = [ "torrent", "magnet", "bittorrent", "infohash", "tracker" ]
 rust-version = "1.64"
 readme = "README.md"
 license = "AGPL-3.0-only"
+repository = "https://github.com/angrynode/hightorrent"
 
 [package.metadata.docs.rs]
 all-features = true
