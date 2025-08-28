@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use std::str::FromStr;
 
 use crate::{InfoHash, InfoHashError, TorrentID};
@@ -17,7 +19,8 @@ use crate::{InfoHash, InfoHashError, TorrentID};
 /// that would allow for logic errors (experienced first-hand). However, the
 /// [`truncated`](crate::target::SingleTarget::truncated) method returns a string
 /// truncated to 40 characters.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(try_from = "&str")]
 pub struct SingleTarget(String);
 
 impl SingleTarget {
@@ -63,6 +66,14 @@ impl SingleTarget {
 impl std::fmt::Display for SingleTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl TryFrom<&str> for SingleTarget {
+    type Error = InfoHashError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 
@@ -187,5 +198,31 @@ mod tests {
             SingleTarget::new("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234")
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn deserialize_single_target() {
+        let s = "not a torrent";
+        assert!(serde_json::from_str::<SingleTarget>(&format!("\"{}\"", s)).is_err());
+
+        let s = "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234";
+        assert!(serde_json::from_str::<SingleTarget>(&format!("\"{}\"", s)).is_ok());
+    }
+
+    #[test]
+    fn deserialize_ignores_casing() {
+        let s = "ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF1234";
+        let res = serde_json::from_str::<SingleTarget>(&format!("\"{}\"", s));
+        assert!(res.is_ok());
+
+        let target = res.unwrap();
+        assert_eq!(target, SingleTarget::new(&s.to_lowercase()).unwrap());
+    }
+
+    #[test]
+    fn deserialize_forbidden_chars() {
+        let s = "ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF....";
+        let res = serde_json::from_str::<SingleTarget>(&format!("\"{}\"", s));
+        assert!(res.is_err());
     }
 }
