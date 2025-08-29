@@ -16,7 +16,7 @@ use crate::{InfoHash, InfoHashError};
 /// [`InfoHash`](crate::hash::InfoHash) with the
 /// [`TorrentID::from_infohash`](crate::id::TorrentID::from_infohash) and
 /// [`InfoHash::id`](crate::hash::InfoHash::id) methods.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TorrentID(String);
 
 impl TorrentID {

@@ -46,7 +46,7 @@ impl std::error::Error for InfoHashError {}
 /// a Bittorrent v1 info hash (40 chars sha1) or Bittorrent v2 info hash (64 chars sha256). In both cases, the hash
 /// is guaranteed to be a valid sha1/sha256 lowercase hex digest and not a random string.
 /// Alternatively, the Hybrid variant holds both v1 and v2 lowercase hex digests.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum InfoHash {
     V1(String),
     V2(String),
