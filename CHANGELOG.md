@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED (YYYY-MM-DD)
 
+## Version 0.3.2 (2025-08-29)
+
 ### Added
 
 - `InfoHash` and `SingleTarget` now implement `Eq` and `Hash` for use in maps and other collections
