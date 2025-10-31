@@ -1,12 +1,23 @@
-use url::Url;
+use fluent_uri::pct_enc::{encoder::Query, EStr};
+use fluent_uri::{ParseError as UriParseError, Uri};
 
 use crate::{InfoHash, InfoHashError, TorrentID};
+
+use std::string::FromUtf8Error;
 
 /// Error occurred during parsing a [`MagnetLink`](crate::magnet::MagnetLink).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MagnetLinkError {
-    /// The URI was not valid according to [`Url::parse`](url::Url::parse).
-    InvalidURI { source: url::ParseError },
+    /// The URI was not valid according to [`Uri::parse`](fluent_uri::Uri::parse).
+    InvalidURI { source: UriParseError },
+    /// The URI does not contain a query.
+    InvalidURINoQuery,
+    /// The URI query contains non-UTF8 chars
+    InvalidURIQueryUnicode { source: FromUtf8Error },
+    /// The URI query contains a key without a value
+    InvalidURIQueryEmptyValue { key: String },
+    /// The URI query contains a non-urlencoded `?` beyond the query declaration
+    InvalidURIQueryInterrogation,
     /// The URI contains a newline
     InvalidURINewLine,
     /// The URI scheme was not `magnet`
@@ -19,6 +30,8 @@ pub enum MagnetLinkError {
     InvalidHash { source: InfoHashError },
     /// Too many hashes were found in the magnet URI, expected two at most.
     TooManyHashes { number: usize },
+    /// There were two or more `dn` declarations in the magnet query.
+    DuplicateName,
     /// No name was contained in the magnet URI. This is technically allowed by
     /// some implementations, but should not be encouraged/supported.
     #[cfg(feature = "magnet_force_name")]
@@ -30,6 +43,18 @@ impl std::fmt::Display for MagnetLinkError {
         match self {
             MagnetLinkError::InvalidURI { source } => {
                 write!(f, "Invalid URI: {source}")
+            }
+            MagnetLinkError::InvalidURINoQuery => {
+                write!(f, "Invalid URI: no query string")
+            }
+            MagnetLinkError::InvalidURIQueryEmptyValue { key } => {
+                write!(f, "Invalid URI: query has key {key} with no value")
+            }
+            MagnetLinkError::InvalidURIQueryUnicode { .. } => {
+                write!(f, "Invalid URI: the query part contains non-utf8 chars")
+            }
+            MagnetLinkError::InvalidURIQueryInterrogation => {
+                write!(f, "Invalid URI: the query part should only contain one `?`")
             }
             MagnetLinkError::InvalidURINewLine => {
                 write!(f, "Invalid URI: newlines are not allowed in magnet links")
@@ -46,6 +71,12 @@ impl std::fmt::Display for MagnetLinkError {
             MagnetLinkError::TooManyHashes { number } => {
                 write!(f, "Too many hashes ({number})")
             }
+            MagnetLinkError::DuplicateName => {
+                write!(
+                    f,
+                    "Too many name declarations for the magnet, only expecting one."
+                )
+            }
             #[cfg(feature = "magnet_force_name")]
             MagnetLinkError::NoNameFound => {
                 write!(f, "No name found")
@@ -60,9 +91,15 @@ impl From<InfoHashError> for MagnetLinkError {
     }
 }
 
-impl From<url::ParseError> for MagnetLinkError {
-    fn from(e: url::ParseError) -> MagnetLinkError {
-        MagnetLinkError::InvalidURI { source: e }
+impl<Input> From<(UriParseError, Input)> for MagnetLinkError {
+    fn from(e: (UriParseError, Input)) -> MagnetLinkError {
+        MagnetLinkError::InvalidURI { source: e.0 }
+    }
+}
+
+impl From<FromUtf8Error> for MagnetLinkError {
+    fn from(e: FromUtf8Error) -> MagnetLinkError {
+        MagnetLinkError::InvalidURIQueryUnicode { source: e }
     }
 }
 
@@ -71,6 +108,7 @@ impl std::error::Error for MagnetLinkError {
         match self {
             MagnetLinkError::InvalidURI { source } => Some(source),
             MagnetLinkError::InvalidHash { source } => Some(source),
+            // MagnetLinkError::InvalidURIQueryUnicode { source } => Some(source),
             _ => None,
         }
     }
@@ -80,11 +118,19 @@ impl std::error::Error for MagnetLinkError {
 ///
 /// The MagnetLink can provide information about the torrent
 /// [`name`](crate::magnet::MagnetLink::name) and [`hash`](crate::magnet::MagnetLink::hash).
-/// Other fields can be contained in the magnet URI, as explained [on Wikipedia](https://en.wikipedia.org/wiki/Magnet_URI_scheme). However,
-/// they are currently not exposed by this library.
+///
+/// More information is specified in [BEP-0009](https://bittorrent.org/beps/bep_0009.html), and
+/// even more appears in the wild, as explained [on Wikipedia](https://en.wikipedia.org/wiki/Magnet_URI_scheme).
 #[derive(Clone, Debug)]
 pub struct MagnetLink {
+    /// Only mandatory field for magnet link parsing, unless the
+    /// `magnet_force_name` crate feature is enabled.
     hash: InfoHash,
+    /// Original query string from which the magnet was parsed.
+    /// Used to format the magnet link back to a string.
+    query: String,
+    /// Name of the torrent, which may be empty unless
+    /// `magnet_force_name` crate feature is enabled.
     name: String,
 }
 
@@ -97,7 +143,8 @@ impl MagnetLink {
         if s.contains('\n') {
             return Err(MagnetLinkError::InvalidURINewLine);
         }
-        let u = Url::parse(s)?;
+
+        let u = Uri::parse(s.to_string())?;
         MagnetLink::from_url(&u)
     }
 
@@ -110,8 +157,8 @@ impl MagnetLink {
     ///     `urn:btmh:1220` for v2 infohash)
     ///   - more than one hash of the same type was found
     ///   - the hashes were not valid according to [`InfoHash::new`](crate::hash::InfoHash::new)
-    pub fn from_url(u: &Url) -> Result<MagnetLink, MagnetLinkError> {
-        if u.scheme() != "magnet" {
+    pub fn from_url(u: &Uri<String>) -> Result<MagnetLink, MagnetLinkError> {
+        if u.scheme().as_str() != "magnet" {
             return Err(MagnetLinkError::InvalidScheme {
                 scheme: u.scheme().to_string(),
             });
@@ -120,10 +167,23 @@ impl MagnetLink {
         let mut name = String::new();
         let mut hashes: Vec<String> = Vec::new();
 
-        for (key, val) in u.query_pairs() {
-            // Deref cow into str then reference it
-            match &*key {
+        let query = u.query().ok_or(MagnetLinkError::InvalidURINoQuery)?;
+        for (key, val) in Self::unsafe_parse_query(query)? {
+            // magnets should not allow unescaped ? in query value
+            if val.as_str().contains('?') {
+                return Err(MagnetLinkError::InvalidURIQueryInterrogation);
+            }
+
+            // magnets should not allow empty query values
+            if val.is_empty() {
+                return Err(MagnetLinkError::InvalidURIQueryEmptyValue {
+                    key: key.as_str().to_string(),
+                });
+            }
+
+            match key.as_str() {
                 "xt" => {
+                    let val = val.as_str();
                     if val.starts_with("urn:btih:") {
                         // Infohash v1
                         hashes.push(val.strip_prefix("urn:btih:").unwrap().to_string());
@@ -133,9 +193,22 @@ impl MagnetLink {
                     }
                 }
                 "dn" => {
-                    name.push_str(&val);
+                    if !name.is_empty() {
+                        return Err(MagnetLinkError::DuplicateName);
+                    }
+                    name = val
+                        .decode()
+                        .into_string()?
+                        // fluent_uri explicitly does not decode U+002B (`+`) as a space
+                        .replace('+', " ")
+                        .to_owned();
                 }
-                _ => continue,
+                "tr" => {
+                    // TODO: trackers
+                }
+                _ => {
+                    continue;
+                }
             }
         }
 
@@ -171,9 +244,38 @@ impl MagnetLink {
         };
 
         Ok(MagnetLink {
-            name,
             hash: final_hash,
+            name: name.to_string(),
+            query: query.as_str().to_string(),
         })
+    }
+
+    /// Parse the query in a list of key->value entries with a percent-decoder attached.
+    ///
+    /// The results can be accessed raw with [EStr::as_str()] and percent-decoded with [EStr::decode].
+    ///
+    /// This method only fails if the magnet query is empty (`magnet:`), but may produce unexpected
+    /// results because it does not apply magnet-specific sanitation.
+    ///
+    /// This method has a dangerous-sounding name because of percent-encoding.
+    /// If you aren't careful, you may end up with garbage data. This method
+    /// is not actually memory-unsafe.
+    ///
+    /// For example:
+    ///
+    /// - a key without a value may be returned
+    /// - duplicate entries may be returned (such as a double magnet name)
+    /// - a value with an unencoded `?` may be returned
+    #[allow(clippy::type_complexity)]
+    pub fn unsafe_parse_query(
+        query: &EStr<Query>,
+    ) -> Result<Vec<(&EStr<Query>, &EStr<Query>)>, MagnetLinkError> {
+        let pairs: Vec<(&EStr<Query>, &EStr<Query>)> = query
+            .split('&')
+            .map(|s| s.split_once('=').unwrap_or((s, EStr::EMPTY)))
+            .collect();
+
+        Ok(pairs)
     }
 
     /// Returns the [`InfoHash`](crate::hash::InfoHash) contained in the MagnetLink
@@ -192,6 +294,12 @@ impl MagnetLink {
     /// Returns the [`TorrentID`](crate::id::TorrentID) for the MagnetLink
     pub fn id(&self) -> TorrentID {
         self.hash.id()
+    }
+}
+
+impl std::fmt::Display for MagnetLink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "magnet:?{}", self.query)
     }
 }
 
@@ -349,5 +457,18 @@ mod tests {
         assert!(res.is_err());
 
         assert_eq!(res.unwrap_err(), MagnetLinkError::InvalidURINewLine,);
+    }
+
+    #[test]
+    fn survives_roundtrip() {
+        // Here we test that parsing a magnet then displaying it again
+        // will produce exactly the same output.
+        let magnet_url =
+            Uri::parse(std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap())
+                .unwrap();
+        let magnet = MagnetLink::from_url(&magnet_url).unwrap();
+
+        let magnet_str = magnet.to_string();
+        assert_eq!(&magnet_url.to_string(), &magnet_str);
     }
 }
