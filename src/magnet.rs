@@ -7,6 +7,8 @@ use crate::{InfoHash, InfoHashError, TorrentID};
 pub enum MagnetLinkError {
     /// The URI was not valid according to [`Url::parse`](url::Url::parse).
     InvalidURI { source: url::ParseError },
+    /// The URI contains a newline
+    InvalidURINewLine,
     /// The URI scheme was not `magnet`
     InvalidScheme { scheme: String },
     /// No Bittorrent v1/v2 hash was found in the magnet URI
@@ -28,6 +30,9 @@ impl std::fmt::Display for MagnetLinkError {
         match self {
             MagnetLinkError::InvalidURI { source } => {
                 write!(f, "Invalid URI: {source}")
+            }
+            MagnetLinkError::InvalidURINewLine => {
+                write!(f, "Invalid URI: newlines are not allowed in magnet links")
             }
             MagnetLinkError::InvalidScheme { scheme } => {
                 write!(f, "Invalid URI scheme: {scheme}")
@@ -87,6 +92,11 @@ impl MagnetLink {
     /// Generates a new MagnetLink from a string. Will fail if the string is not a valid URL, and
     /// in the conditions defined in [`MagnetLink::from_url`](crate::magnet::MagnetLink::from_url).
     pub fn new(s: &str) -> Result<MagnetLink, MagnetLinkError> {
+        // The error returned by Uri::parse when there is a newline is not very obvious, so we
+        // sacrifice performance to save neurons from fellow developers.
+        if s.contains('\n') {
+            return Err(MagnetLinkError::InvalidURINewLine);
+        }
         let u = Url::parse(s)?;
         MagnetLink::from_url(&u)
     }
@@ -328,5 +338,16 @@ mod tests {
                 scheme: "https".to_string()
             }
         );
+    }
+
+    #[test]
+    fn fails_newline_in_magnet() {
+        let mut magnet_url = std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap();
+        magnet_url.push('\n');
+
+        let res = MagnetLink::new(&magnet_url);
+        assert!(res.is_err());
+
+        assert_eq!(res.unwrap_err(), MagnetLinkError::InvalidURINewLine,);
     }
 }
