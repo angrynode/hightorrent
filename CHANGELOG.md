@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED (YYYY-MM-DD)
 
+### Breaking changes
+
+- `MagnetLink` now refuses to parse strings that contain a newline (`\n`), producing
+  a `MagnetLinkError::InvalidURINewLine` error
+
 ## Version 0.3.2 (2025-08-29)
 
 ### Added
