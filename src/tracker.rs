@@ -1,4 +1,4 @@
-use url::Url;
+use fluent_uri::{ParseError as UriParseError, Uri};
 
 /// A source of peers. Can be a [`Tracker`](crate::tracker::Tracker) or a decentralized source.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -37,7 +37,7 @@ pub enum TrackerScheme {
 /// Error occurred during parsing a [`Tracker`](crate::tracker::Tracker).
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrackerError {
-    InvalidURL { source: url::ParseError },
+    InvalidURL { source: UriParseError },
     InvalidScheme { scheme: String },
 }
 
@@ -59,9 +59,9 @@ impl std::error::Error for TrackerError {
     }
 }
 
-impl From<url::ParseError> for TrackerError {
-    fn from(e: url::ParseError) -> TrackerError {
-        TrackerError::InvalidURL { source: e }
+impl<Input> From<(UriParseError, Input)> for TrackerError {
+    fn from(e: (UriParseError, Input)) -> TrackerError {
+        TrackerError::InvalidURL { source: e.0 }
     }
 }
 
@@ -78,7 +78,7 @@ impl PeerSource {
     ///
     /// Only covers the Tracker variant. Other variants should be
     /// instantiated directly.
-    pub fn from_url(url: &Url) -> Result<PeerSource, TrackerError> {
+    pub fn from_url(url: &Uri<String>) -> Result<PeerSource, TrackerError> {
         Ok(Tracker::from_url(url)?.to_peer_source())
     }
 
@@ -90,15 +90,15 @@ impl PeerSource {
 impl Tracker {
     /// Generate a new Tracker from a given string URL.
     pub fn new(url: &str) -> Result<Tracker, TrackerError> {
-        let url = Url::parse(url)?;
+        let url = Uri::parse(url.to_string())?;
         Tracker::from_url(&url)
     }
 
     /// Generate a new Tracker from a parsed URL.
     ///
     /// Will fail if scheme is not "http", "https", "wss" or "udp".
-    pub fn from_url(url: &Url) -> Result<Tracker, TrackerError> {
-        let scheme = match url.scheme() {
+    pub fn from_url(url: &Uri<String>) -> Result<Tracker, TrackerError> {
+        let scheme = match url.scheme().as_str() {
             "http" | "https" => TrackerScheme::Http,
             "wss" => TrackerScheme::Websocket,
             "udp" => TrackerScheme::UDP,

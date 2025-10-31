@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `MagnetLink` now refuses to parse strings that contain a newline (`\n`), producing
   a `MagnetLinkError::InvalidURINewLine` error
+- `MagnetLink::from_url`, `PeerSource::from_url`, and `Tracker::from_url` now take a
+  `fluent_uri::Uri<String>` instead of a `url::Url` previously
+- all error types with an `InvalidURL` variant now have `fluent_uri::ParseError`
+  as source instead of `url::ParseError` previously
+
+### Added
+
+- `MagnetLink` implements `Display`, so it can be converted to a string again
+  using `MagnetLink::to_string`.
+- `MagnetLink::unsafe_parse_query` allows iterating carefully around magnet link
+  query key/values
+- Added new `MagnetLinkError` variants to be more precise about what's wrong with
+  a parsed magnet link.
 
 ## Version 0.3.2 (2025-08-29)
 
