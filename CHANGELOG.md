@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   query key/values
 - Added new `MagnetLinkError` variants to be more precise about what's wrong with
   a parsed magnet link.
+- `MagnetLink::trackers` lists the trackers in the magnet link
 
 ## Version 0.3.2 (2025-08-29)
 
