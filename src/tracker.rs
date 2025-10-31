@@ -13,16 +13,32 @@ pub enum PeerSource {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Tracker {
     scheme: TrackerScheme,
-    url: String,
+    url: Uri<String>,
 }
 
 impl Tracker {
+    pub fn new_http(uri: &str) -> Result<Self, UriParseError> {
+        let uri = Uri::parse(uri)?;
+        Ok(Self {
+            scheme: TrackerScheme::Http,
+            url: uri.into(),
+        })
+    }
+
+    pub fn new_udp(_uri: &str) -> Result<Self, UriParseError> {
+        unimplemented!();
+    }
+
+    pub fn new_ws(_uri: &str) -> Result<Self, UriParseError> {
+        unimplemented!();
+    }
+
     pub fn scheme(&self) -> &TrackerScheme {
         &self.scheme
     }
 
     pub fn url(&self) -> &str {
-        &self.url
+        self.url.as_str()
     }
 }
 
@@ -111,7 +127,7 @@ impl Tracker {
 
         Ok(Tracker {
             scheme,
-            url: url.as_str().to_string(),
+            url: url.clone(),
         })
     }
 

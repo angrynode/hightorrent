@@ -1,7 +1,7 @@
 use fluent_uri::pct_enc::{encoder::Query, EStr};
 use fluent_uri::{ParseError as UriParseError, Uri};
 
-use crate::{InfoHash, InfoHashError, TorrentID};
+use crate::{InfoHash, InfoHashError, TorrentID, Tracker, TrackerError};
 
 use std::string::FromUtf8Error;
 
@@ -36,6 +36,11 @@ pub enum MagnetLinkError {
     /// some implementations, but should not be encouraged/supported.
     #[cfg(feature = "magnet_force_name")]
     NoNameFound,
+    /// The tracker declared could not be parsed.
+    InvalidTracker {
+        tracker: String,
+        source: TrackerError,
+    },
 }
 
 impl std::fmt::Display for MagnetLinkError {
@@ -81,6 +86,9 @@ impl std::fmt::Display for MagnetLinkError {
             MagnetLinkError::NoNameFound => {
                 write!(f, "No name found")
             }
+            MagnetLinkError::InvalidTracker { tracker, .. } => {
+                write!(f, "Invalid tracker: {tracker}")
+            }
         }
     }
 }
@@ -108,7 +116,8 @@ impl std::error::Error for MagnetLinkError {
         match self {
             MagnetLinkError::InvalidURI { source } => Some(source),
             MagnetLinkError::InvalidHash { source } => Some(source),
-            // MagnetLinkError::InvalidURIQueryUnicode { source } => Some(source),
+            MagnetLinkError::InvalidURIQueryUnicode { source } => Some(source),
+            MagnetLinkError::InvalidTracker { source, .. } => Some(source),
             _ => None,
         }
     }
@@ -132,6 +141,8 @@ pub struct MagnetLink {
     /// Name of the torrent, which may be empty unless
     /// `magnet_force_name` crate feature is enabled.
     name: String,
+    /// Trackers contained in the magnet link
+    trackers: Vec<Tracker>,
 }
 
 impl MagnetLink {
@@ -166,6 +177,7 @@ impl MagnetLink {
 
         let mut name = String::new();
         let mut hashes: Vec<String> = Vec::new();
+        let mut trackers: Vec<Tracker> = Vec::new();
 
         let query = u.query().ok_or(MagnetLinkError::InvalidURINoQuery)?;
         for (key, val) in Self::unsafe_parse_query(query)? {
@@ -204,7 +216,13 @@ impl MagnetLink {
                         .to_owned();
                 }
                 "tr" => {
-                    // TODO: trackers
+                    let tracker_uri = val.decode().into_string()?.into_owned();
+                    trackers.push(Tracker::new(tracker_uri.as_str()).map_err(|e| {
+                        MagnetLinkError::InvalidTracker {
+                            source: e,
+                            tracker: tracker_uri,
+                        }
+                    })?);
                 }
                 _ => {
                     continue;
@@ -247,6 +265,7 @@ impl MagnetLink {
             hash: final_hash,
             name: name.to_string(),
             query: query.as_str().to_string(),
+            trackers,
         })
     }
 
@@ -295,6 +314,11 @@ impl MagnetLink {
     pub fn id(&self) -> TorrentID {
         self.hash.id()
     }
+
+    /// Returns the list of [`Tracker`](crate::tracker::Tracker) for the MagnetLink.
+    pub fn trackers(&self) -> &[Tracker] {
+        &self.trackers
+    }
 }
 
 impl std::fmt::Display for MagnetLink {
@@ -306,6 +330,8 @@ impl std::fmt::Display for MagnetLink {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::TrackerScheme;
 
     #[test]
     fn can_load_v1() {
@@ -470,5 +496,64 @@ mod tests {
 
         let magnet_str = magnet.to_string();
         assert_eq!(&magnet_url.to_string(), &magnet_str);
+    }
+
+    #[test]
+    fn can_parse_magnet_trackers() {
+        let expected = &[
+            "udp://tracker.coppersurfer.tk:6969/announce",
+            "udp://tracker.opentrackr.org:1337/announce",
+            "udp://exodus.desync.com:6969",
+            "udp://tracker.opentrackr.org:1337/announce",
+            "http://tracker.openbittorrent.com:80/announce",
+            "udp://opentracker.i2p.rocks:6969/announce",
+            "udp://tracker.internetwarriors.net:1337/announce",
+            "udp://tracker.leechers-paradise.org:6969/announce",
+            "udp://coppersurfer.tk:6969/announce",
+            "udp://tracker.zer0day.to:1337/announce",
+        ];
+
+        let magnet_url =
+            std::fs::read_to_string("tests/bittorrent-v1-emma-goldman.magnet").unwrap();
+        let magnet = MagnetLink::new(&magnet_url).unwrap();
+        let found = magnet
+            .trackers
+            .clone()
+            .into_iter()
+            .map(|tracker| tracker.url().to_string())
+            .collect::<Vec<_>>();
+
+        // Did we find all trackers?
+        assert_eq!(found.len(), expected.len(),);
+        // Did we find that there's 1 HTTP tracker?
+        assert_eq!(
+            magnet
+                .trackers
+                .into_iter()
+                .filter(|tracker| tracker.scheme() == &TrackerScheme::Http)
+                .collect::<Vec<_>>()
+                .len(),
+            1
+        );
+        // Do we have the correct list?
+        assert_eq!(found, expected);
+
+        let magnet_url = std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap();
+        let magnet = MagnetLink::new(&magnet_url).unwrap();
+        let found = magnet
+            .trackers
+            .into_iter()
+            .map(|tracker| tracker.url().to_string())
+            .collect::<Vec<_>>();
+        assert!(found.is_empty());
+
+        let magnet_url = std::fs::read_to_string("tests/bittorrent-v2-hybrid-test.magnet").unwrap();
+        let magnet = MagnetLink::new(&magnet_url).unwrap();
+        let found = magnet
+            .trackers
+            .into_iter()
+            .map(|tracker| tracker.url().to_string())
+            .collect::<Vec<_>>();
+        assert!(found.is_empty());
     }
 }
