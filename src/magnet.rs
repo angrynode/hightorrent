@@ -3,8 +3,6 @@ use fluent_uri::{ParseError as UriParseError, Uri};
 
 use crate::{InfoHash, InfoHashError, TorrentID, Tracker, TrackerError};
 
-use std::string::FromUtf8Error;
-
 /// Error occurred during parsing a [`MagnetLink`](crate::magnet::MagnetLink).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MagnetLinkError {
@@ -13,7 +11,7 @@ pub enum MagnetLinkError {
     /// The URI does not contain a query.
     InvalidURINoQuery,
     /// The URI query contains non-UTF8 chars
-    InvalidURIQueryUnicode { source: FromUtf8Error },
+    InvalidURIQueryUnicode,
     /// The URI query contains a key without a value
     InvalidURIQueryEmptyValue { key: String },
     /// The URI query contains a non-urlencoded `?` beyond the query declaration
@@ -55,7 +53,7 @@ impl std::fmt::Display for MagnetLinkError {
             MagnetLinkError::InvalidURIQueryEmptyValue { key } => {
                 write!(f, "Invalid URI: query has key {key} with no value")
             }
-            MagnetLinkError::InvalidURIQueryUnicode { .. } => {
+            MagnetLinkError::InvalidURIQueryUnicode => {
                 write!(f, "Invalid URI: the query part contains non-utf8 chars")
             }
             MagnetLinkError::InvalidURIQueryInterrogation => {
@@ -105,18 +103,11 @@ impl<Input> From<(UriParseError, Input)> for MagnetLinkError {
     }
 }
 
-impl From<FromUtf8Error> for MagnetLinkError {
-    fn from(e: FromUtf8Error) -> MagnetLinkError {
-        MagnetLinkError::InvalidURIQueryUnicode { source: e }
-    }
-}
-
 impl std::error::Error for MagnetLinkError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             MagnetLinkError::InvalidURI { source } => Some(source),
             MagnetLinkError::InvalidHash { source } => Some(source),
-            MagnetLinkError::InvalidURIQueryUnicode { source } => Some(source),
             MagnetLinkError::InvalidTracker { source, .. } => Some(source),
             _ => None,
         }
@@ -210,17 +201,21 @@ impl MagnetLink {
                     }
                     name = val
                         .decode()
-                        .into_string()?
+                        .to_string()
+                        .map_err(|_| MagnetLinkError::InvalidURIQueryUnicode)?
                         // fluent_uri explicitly does not decode U+002B (`+`) as a space
                         .replace('+', " ")
                         .to_owned();
                 }
                 "tr" => {
-                    let tracker_uri = val.decode().into_string()?.into_owned();
-                    trackers.push(Tracker::new(tracker_uri.as_str()).map_err(|e| {
+                    let tracker_uri = val
+                        .decode()
+                        .to_string()
+                        .map_err(|_| MagnetLinkError::InvalidURIQueryUnicode)?;
+                    trackers.push(Tracker::new(&tracker_uri).map_err(|e| {
                         MagnetLinkError::InvalidTracker {
                             source: e,
-                            tracker: tracker_uri,
+                            tracker: tracker_uri.to_string(),
                         }
                     })?);
                 }
