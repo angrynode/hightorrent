@@ -234,6 +234,13 @@ pub struct DecodedInfo {
 }
 
 impl TorrentFile {
+    /// Serialize to a .torrent file byte slice
+    pub fn to_vec(&self) -> Vec<u8> {
+        // This should not fail
+        bt_bencode::to_vec(&self.decoded).unwrap()
+    }
+
+    /// Deserialize (parse) from a .torrent file byte slice
     pub fn from_slice(s: &[u8]) -> Result<TorrentFile, TorrentFileError> {
         let torrent: DecodedTorrent = bt_bencode::from_slice(s).map_err(|e| {
             // We store a stringy representation of the error because bt_encode::Error

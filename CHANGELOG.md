@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a parsed magnet link.
 - `MagnetLink::trackers` lists the trackers in the magnet link
 - `TrackerScheme` and `Tracker` implement `FromStr`
+- `TorrentFile::to_vec` serializes to a bencoded byte slice, to save to
+   a .torrent file
 
 ### Fixed
 
