@@ -1,5 +1,7 @@
 use fluent_uri::{ParseError as UriParseError, Uri};
 
+use std::str::FromStr;
+
 /// A source of peers. Can be a [`Tracker`](crate::tracker::Tracker) or a decentralized source.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum PeerSource {
@@ -48,6 +50,21 @@ pub enum TrackerScheme {
     Websocket,
     Http,
     UDP,
+}
+
+impl FromStr for TrackerScheme {
+    type Err = TrackerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "http" | "https" => Ok(Self::Http),
+            "ws" => Ok(Self::Websocket),
+            "udp" => Ok(Self::UDP),
+            _ => Err(TrackerError::InvalidScheme {
+                scheme: s.to_string(),
+            }),
+        }
+    }
 }
 
 /// Error occurred during parsing a [`Tracker`](crate::tracker::Tracker).
@@ -114,19 +131,8 @@ impl Tracker {
     ///
     /// Will fail if scheme is not "http", "https", "wss" or "udp".
     pub fn from_url(url: &Uri<String>) -> Result<Tracker, TrackerError> {
-        let scheme = match url.scheme().as_str() {
-            "http" | "https" => TrackerScheme::Http,
-            "wss" => TrackerScheme::Websocket,
-            "udp" => TrackerScheme::UDP,
-            _ => {
-                return Err(TrackerError::InvalidScheme {
-                    scheme: url.scheme().to_string(),
-                });
-            }
-        };
-
         Ok(Tracker {
-            scheme,
+            scheme: TrackerScheme::from_str(url.scheme().as_str())?,
             url: url.clone(),
         })
     }
