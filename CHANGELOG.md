@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as source instead of `url::ParseError` previously
 - `TrackerScheme` variant `UDP` has been renamed `Udp` to be more consistent with
   other variants, and other rust types
+- `TrackerScheme` no longer derives de/serialize because that's not actually
+  used in torrent files
 
 
 ### Added
