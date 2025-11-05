@@ -70,6 +70,14 @@ impl Serialize for Tracker {
     }
 }
 
+impl FromStr for Tracker {
+    type Err = TrackerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
+    }
+}
+
 /// A protocol used by a [`Tracker`](crate::tracker::Tracker).
 ///
 /// Does not implement Serialize/Deserialize because it's actually not in the
