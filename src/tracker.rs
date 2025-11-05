@@ -1,4 +1,5 @@
 use fluent_uri::{ParseError as UriParseError, Uri};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::str::FromStr;
 
@@ -12,7 +13,7 @@ pub enum PeerSource {
 }
 
 /// A centralized variant of a [`Peersource`](crate::tracker::PeerSource).
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Tracker {
     scheme: TrackerScheme,
     url: Uri<String>,
@@ -41,6 +42,26 @@ impl Tracker {
 
     pub fn url(&self) -> &str {
         self.url.as_str()
+    }
+}
+
+impl<'de> Deserialize<'de> for Tracker {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Tracker::new(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for Tracker {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // serializer.serialize(&self.url)
+        self.url.serialize(serializer)
     }
 }
 

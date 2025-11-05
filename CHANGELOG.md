@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MagnetLink::trackers` lists the trackers in the magnet link
 - `TrackerScheme` implements `FromStr`
 
+### Fixed
+
+- `Tracker` (de)serialization implementation is now custom and only uses the
+  inner URL instead of trying to (de)serialize all fields which was wrong
+
 ## Version 0.3.2 (2025-08-29)
 
 ### Added
