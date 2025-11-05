@@ -49,7 +49,7 @@ impl Tracker {
 pub enum TrackerScheme {
     Websocket,
     Http,
-    UDP,
+    Udp,
 }
 
 impl FromStr for TrackerScheme {
@@ -59,7 +59,7 @@ impl FromStr for TrackerScheme {
         match s {
             "http" | "https" => Ok(Self::Http),
             "ws" => Ok(Self::Websocket),
-            "udp" => Ok(Self::UDP),
+            "udp" => Ok(Self::Udp),
             _ => Err(TrackerError::InvalidScheme {
                 scheme: s.to_string(),
             }),

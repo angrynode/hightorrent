@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `fluent_uri::Uri<String>` instead of a `url::Url` previously
 - all error types with an `InvalidURL` variant now have `fluent_uri::ParseError`
   as source instead of `url::ParseError` previously
+- `TrackerScheme` variant `UDP` has been renamed `Udp` to be more consistent with
+  other variants, and other rust types
+
 
 ### Added
 
