@@ -20,20 +20,25 @@ pub struct Tracker {
 }
 
 impl Tracker {
-    pub fn new_http(uri: &str) -> Result<Self, UriParseError> {
-        let uri = Uri::parse(uri)?;
-        Ok(Self {
-            scheme: TrackerScheme::Http,
-            url: uri.into(),
+    /// Generate a new Tracker from a given string URL.
+    pub fn new(url: &str) -> Result<Tracker, TrackerError> {
+        let url = Uri::parse(url.to_string())?;
+        Tracker::from_url(&url)
+    }
+
+    /// Generate a new Tracker from a parsed URL.
+    ///
+    /// Will fail if scheme is not "http", "https", "wss" or "udp".
+    pub fn from_url(url: &Uri<String>) -> Result<Tracker, TrackerError> {
+        Ok(Tracker {
+            scheme: TrackerScheme::from_str(url.scheme().as_str())?,
+            url: url.clone(),
         })
     }
 
-    pub fn new_udp(_uri: &str) -> Result<Self, UriParseError> {
-        unimplemented!();
-    }
-
-    pub fn new_ws(_uri: &str) -> Result<Self, UriParseError> {
-        unimplemented!();
+    /// Turns a centralized Tracker into a wider PeerSource
+    pub fn to_peer_source(&self) -> PeerSource {
+        PeerSource::from_tracker(self)
     }
 
     pub fn scheme(&self) -> &TrackerScheme {
@@ -142,29 +147,6 @@ impl PeerSource {
 
     pub fn from_tracker(tracker: &Tracker) -> PeerSource {
         PeerSource::Tracker(tracker.clone())
-    }
-}
-
-impl Tracker {
-    /// Generate a new Tracker from a given string URL.
-    pub fn new(url: &str) -> Result<Tracker, TrackerError> {
-        let url = Uri::parse(url.to_string())?;
-        Tracker::from_url(&url)
-    }
-
-    /// Generate a new Tracker from a parsed URL.
-    ///
-    /// Will fail if scheme is not "http", "https", "wss" or "udp".
-    pub fn from_url(url: &Uri<String>) -> Result<Tracker, TrackerError> {
-        Ok(Tracker {
-            scheme: TrackerScheme::from_str(url.scheme().as_str())?,
-            url: url.clone(),
-        })
-    }
-
-    /// Turns a centralized Tracker into a wider PeerSource
-    pub fn to_peer_source(&self) -> PeerSource {
-        PeerSource::from_tracker(self)
     }
 }
 
