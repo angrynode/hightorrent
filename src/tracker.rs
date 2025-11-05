@@ -66,7 +66,11 @@ impl Serialize for Tracker {
 }
 
 /// A protocol used by a [`Tracker`](crate::tracker::Tracker).
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+///
+/// Does not implement Serialize/Deserialize because it's actually not in the
+/// torrent data. It is constructed from the parsed tracker URLs contained in
+/// the torrent data.
+#[derive(Clone, Debug, PartialEq)]
 pub enum TrackerScheme {
     Websocket,
     Http,
