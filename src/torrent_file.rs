@@ -6,7 +6,7 @@ use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::{InfoHash, InfoHashError, PieceLength, TorrentContent, TorrentID};
+use crate::{InfoHash, InfoHashError, PieceLength, TorrentContent, TorrentID, Tracker};
 
 /// Error occurred during parsing a [`TorrentFile`](crate::torrent_file::TorrentFile).
 #[derive(Clone, Debug, PartialEq)]
@@ -89,11 +89,24 @@ pub struct TorrentFile {
 
 /// A parsed bencode-decoded value, to ensure torrent-like structure.
 ///
-/// In its present form, DecodedTorrent only cares about the info dict, but preserves other fields
+/// In its present form, DecodedTorrent mostly cares about the info dict, but preserves other fields
 /// as [`BencodeValue`](bt_bencode::BencodeValue) in an `extra` mapping so you can implement
 /// your own extra parsing.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DecodedTorrent {
+    /// Main tracker
+    #[serde(skip_serializing_if = "Option::is_none")]
+    announce: Option<Tracker>,
+
+    /// Many alternative trackers.
+    /// TODO: what is this about the tiers?
+    #[serde(
+        rename = "announce-list",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    announce_list: Vec<Vec<Tracker>>,
+
     info: DecodedInfo,
 
     // Rest of torrent dict

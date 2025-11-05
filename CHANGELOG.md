@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TrackerScheme` and `Tracker` implement `FromStr`
 - `TorrentFile::to_vec` serializes to a bencoded byte slice, to save to
    a .torrent file
+- `DecodedTorrent::announce` and `DecodedTorrent::announce_list` list the
+  trackers contained in the torrent file
 
 ### Fixed
 
