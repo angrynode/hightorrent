@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added new `MagnetLinkError` variants to be more precise about what's wrong with
   a parsed magnet link.
 - `MagnetLink::trackers` lists the trackers in the magnet link
-- `TrackerScheme` implements `FromStr`
+- `TrackerScheme` and `Tracker` implement `FromStr`
 
 ### Fixed
 
