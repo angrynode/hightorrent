@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TrackerScheme` no longer derives de/serialize because that's not actually
   used in torrent files
 - A torrent file with an invalid tracker URI (such as an unknown scheme) will now
-  fail to parse as a `DecodedTorrent` and therefore as a `TorrentFile`
+  fail to parse as a `DecodedTorrent` and therefore as a `TorrentFile`, unless the
+  `unknown_tracker_scheme` variant is enabled, in which case it will produce a
+  valid `TorrentFile` where the `TrackerScheme` is of the `Unknown` variant
 
 
 ### Added
@@ -37,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    a .torrent file
 - `DecodedTorrent::announce` and `DecodedTorrent::announce_list` list the
   trackers contained in the torrent file
+- `TrackerScheme::Unknown` stores unknown schemes instead of failing to parse,
+  when the tracker URL scheme is not recognized, and when the `unknown_tracker_scheme`
+  crate feature is anbled
 
 ### Fixed
 

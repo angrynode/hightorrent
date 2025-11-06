@@ -88,6 +88,15 @@ pub enum TrackerScheme {
     Websocket,
     Http,
     Udp,
+    /// An unknown scheme is in the tracker URI.
+    ///
+    /// This is also the case when there is no scheme, in which
+    /// case the domain name may be parsed as a scheme.
+    ///
+    /// This is disabled by default and required the `unknown_tracker_scheme`
+    /// crate feature enabled if you really need to parse broken torrents.
+    #[cfg(feature = "unknown_tracker_scheme")]
+    Unknown(String),
 }
 
 impl FromStr for TrackerScheme {
@@ -98,6 +107,9 @@ impl FromStr for TrackerScheme {
             "http" | "https" => Ok(Self::Http),
             "ws" => Ok(Self::Websocket),
             "udp" => Ok(Self::Udp),
+            #[cfg(feature = "unknown_tracker_scheme")]
+            _ => Ok(Self::Unknown(s.to_string())),
+            #[cfg(not(feature = "unknown_tracker_scheme"))]
             _ => Err(TrackerError::InvalidScheme {
                 scheme: s.to_string(),
             }),

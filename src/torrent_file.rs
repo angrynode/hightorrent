@@ -347,6 +347,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "unknown_tracker_scheme"))]
     fn fail_no_torrent_scheme() {
         let slice = std::fs::read("tests/libtorrent/good/sample.torrent").unwrap();
         let res = TorrentFile::from_slice(&slice);
