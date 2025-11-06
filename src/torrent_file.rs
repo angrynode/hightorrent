@@ -329,7 +329,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_read_torrent_v1() {
+    fn can_read_torrent_v1_multifile() {
         let slice = std::fs::read("tests/bittorrent-v1-emma-goldman.torrent").unwrap();
         let res = TorrentFile::from_slice(&slice);
         println!("{:?}", res);
@@ -347,29 +347,16 @@ mod tests {
     }
 
     #[test]
-    fn can_read_torrent_v1_multifile() {
+    fn fail_no_torrent_scheme() {
         let slice = std::fs::read("tests/libtorrent/good/sample.torrent").unwrap();
         let res = TorrentFile::from_slice(&slice);
         println!("{:?}", res);
-        assert!(res.is_ok());
-        let torrent = res.unwrap();
-        assert_eq!(&torrent.name, "sample");
+        assert!(res.is_err());
         assert_eq!(
-            torrent.hash,
-            InfoHash::V1("58d8d15a4eb3bd9afabc9cee2564f78192777edb".to_string())
-        );
-        assert_eq!(
-            torrent.decoded.files().unwrap(),
-            vec!(
-                TorrentContent {
-                    path: PathBuf::from("text_file.txt"),
-                    size: 20,
-                },
-                TorrentContent {
-                    path: PathBuf::from("text_file2.txt"),
-                    size: 25,
-                }
-            ),
+            res.unwrap_err(),
+            TorrentFileError::NotATorrent {
+                reason: "Invalid scheme: tracker.publicbt.com".to_string()
+            },
         );
     }
 
