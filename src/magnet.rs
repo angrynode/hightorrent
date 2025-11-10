@@ -116,9 +116,6 @@ impl std::error::Error for MagnetLinkError {
 
 /// A Magnet URI, which contains the infohash(es) but not the entire meta info.
 ///
-/// The MagnetLink can provide information about the torrent
-/// [`name`](crate::magnet::MagnetLink::name) and [`hash`](crate::magnet::MagnetLink::hash).
-///
 /// More information is specified in [BEP-0009](https://bittorrent.org/beps/bep_0009.html), and
 /// even more appears in the wild, as explained [on Wikipedia](https://en.wikipedia.org/wiki/Magnet_URI_scheme).
 #[derive(Clone, Debug)]
@@ -133,6 +130,9 @@ pub struct MagnetLink {
     /// `magnet_force_name` crate feature is enabled.
     name: String,
     /// Trackers contained in the magnet link
+    ///
+    /// The trackers are url-encoded in the magnet link, but are presented here
+    /// in their decoded form which can is human-readable.
     trackers: Vec<Tracker>,
 }
 
@@ -266,7 +266,7 @@ impl MagnetLink {
 
     /// Parse the query in a list of key->value entries with a percent-decoder attached.
     ///
-    /// The results can be accessed raw with [EStr::as_str()] and percent-decoded with [EStr::decode].
+    /// The results can be accessed raw with [EStr::as_str] and percent-decoded with [EStr::decode].
     ///
     /// This method only fails if the magnet query is empty (`magnet:`), but may produce unexpected
     /// results because it does not apply magnet-specific sanitation.

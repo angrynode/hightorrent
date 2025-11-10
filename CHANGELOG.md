@@ -19,10 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   other variants, and other rust types
 - `TrackerScheme` no longer derives de/serialize because that's not actually
   used in torrent files
-- A torrent file with an invalid tracker URI (such as an unknown scheme) will now
-  fail to parse as a `DecodedTorrent` and therefore as a `TorrentFile`, unless the
-  `unknown_tracker_scheme` variant is enabled, in which case it will produce a
-  valid `TorrentFile` where the `TrackerScheme` is of the `Unknown` variant
+- A torrent file with an invalid tracker URI (eg. non-urlencoded or unknown
+  scheme) will now  fail to parse as a `DecodedTorrent` and therefore as a
+  `TorrentFile`; if the `unknown_tracker_scheme` variant is enabled, the
+  unknown scheme will not produce an error but a `TrackerScheme::Unknown`
 
 
 ### Added

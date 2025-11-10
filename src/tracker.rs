@@ -12,15 +12,25 @@ pub enum PeerSource {
     Tracker(Tracker),
 }
 
-/// A centralized variant of a [`Peersource`](crate::tracker::PeerSource).
+/// A Bittorrent rendezvous server for peers to find one another.
+///
+/// This is usually parsed directly from a [`TorrentFile`](crate::torrent_file::TorrentFile)
+/// or a [`MagnetLink`](crate::magnet::MagnetLink).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Tracker {
+    /// Tracker URL scheme (usually `ws`, `http(s)`, or `udp`)
     scheme: TrackerScheme,
+    /// Complete tracker URL
     url: Uri<String>,
 }
 
 impl Tracker {
     /// Generate a new Tracker from a given string URL.
+    ///
+    /// Will fail if scheme is not "http", "https", "wss" or "udp", unless
+    /// the `unknown_tracker_scheme` crate feature is enabled.
+    ///
+    /// Will also fail if the provided URL is url-encoded.
     pub fn new(url: &str) -> Result<Tracker, TrackerError> {
         let url = Uri::parse(url.to_string())?;
         Tracker::from_url(&url)
@@ -28,7 +38,8 @@ impl Tracker {
 
     /// Generate a new Tracker from a parsed URL.
     ///
-    /// Will fail if scheme is not "http", "https", "wss" or "udp".
+    /// Will fail if scheme is not "http", "https", "wss" or "udp", unless
+    /// the `unknown_tracker_scheme` crate feature is enabled.
     pub fn from_url(url: &Uri<String>) -> Result<Tracker, TrackerError> {
         Ok(Tracker {
             scheme: TrackerScheme::from_str(url.scheme().as_str())?,
@@ -120,7 +131,14 @@ impl FromStr for TrackerScheme {
 /// Error occurred during parsing a [`Tracker`](crate::tracker::Tracker).
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrackerError {
+    /// Tracker URL could not be parsed because it is malformed.
+    ///
+    /// I'm not sure under what circumstances this could happen.
     InvalidURL { source: UriParseError },
+    /// Tracker scheme is not a known variant.
+    ///
+    /// This error does not exist when the `unknown_tracker_scheme` crate
+    /// feature is enabled.
     InvalidScheme { scheme: String },
 }
 

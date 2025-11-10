@@ -79,6 +79,12 @@ impl std::error::Error for TorrentFileError {
 /// [`name`](crate::torrent_file::TorrentFile::name) and
 /// [`hash`](crate::torrent_file::TorrentFile::hash). Other fields could be supported, but are not
 /// currently implemented by this library.
+///
+/// To save the torrent file to disk, use the `TorrentFile::to_vec` method:
+///
+/// ```ignore
+/// std::fs::write("export.torrent", &torrent.to_vec()).unwrap();
+/// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TorrentFile {
     pub hash: InfoHash,
