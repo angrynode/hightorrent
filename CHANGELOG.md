@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED (YYYY-MM-DD)
 
+## Version 0.4.0 (2025-11-10)
+
+This release is focused on stricter parsing of torrents and magnets, and
+properly parsing trackers. As a result, there are some breaking changes.
+
 ### Breaking changes
 
 - `MagnetLink` now refuses to parse strings that contain a newline (`\n`), producing
