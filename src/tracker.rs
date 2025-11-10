@@ -192,3 +192,39 @@ impl PeerSource {
 pub trait TryIntoTracker {
     fn try_into_tracker(&self) -> Result<Tracker, TrackerError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(not(feature = "unknown_tracker_scheme"))]
+    fn fail_unknown_tracker_scheme() {
+        let tracker = Tracker::new("wtf://example.com:8000/announce");
+        assert!(tracker.is_err());
+        assert_eq!(
+            tracker.unwrap_err(),
+            TrackerError::InvalidScheme {
+                scheme: "wtf".to_string()
+            },
+        );
+    }
+
+    #[test]
+    fn fail_urlencoded_tracker() {
+        let tracker = Tracker::new("http%3F%2A%2A127.0.0.1:8000%2Aannounce");
+        assert!(tracker.is_err());
+    }
+
+    #[test]
+    fn parse_ipv4_literal() {
+        let tracker = Tracker::new("http://127.0.0.1:8000/announce");
+        assert!(tracker.is_ok());
+    }
+
+    #[test]
+    fn parse_ipv6_literal() {
+        let tracker = Tracker::new("http://[::1]:8000/announce");
+        assert!(tracker.is_ok());
+    }
+}

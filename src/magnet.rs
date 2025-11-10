@@ -494,6 +494,16 @@ mod tests {
     }
 
     #[test]
+    fn survives_roundtrip_tracker_urlencoding() {
+        // Test that tracker URLs are properly url-decoded and re-encoded.
+        let magnet_str =
+            std::fs::read_to_string("tests/bittorrent-v1-emma-goldman.magnet").unwrap();
+        let magnet = MagnetLink::new(&magnet_str).unwrap();
+
+        assert_eq!(&magnet.to_string(), &magnet_str);
+    }
+
+    #[test]
     fn can_parse_magnet_trackers() {
         let expected = &[
             "udp://tracker.coppersurfer.tk:6969/announce",
