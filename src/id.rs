@@ -60,3 +60,61 @@ impl FromStr for TorrentID {
         Ok(Self::from_infohash(&hash))
     }
 }
+
+#[cfg(feature = "sea_orm")]
+impl From<TorrentID> for sea_orm::sea_query::Value {
+    fn from(id: TorrentID) -> Self {
+        Self::String(Some(id.to_string()))
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::TryGetable for TorrentID {
+    fn try_get_by<I: sea_orm::ColIdx>(
+        res: &sea_orm::QueryResult,
+        index: I,
+    ) -> Result<Self, sea_orm::error::TryGetError> {
+        let val: String = res.try_get_by(index)?;
+        TorrentID::new(&val).map_err(|e| {
+            sea_orm::error::TryGetError::DbErr(sea_orm::DbErr::TryIntoErr {
+                from: "String",
+                into: "TorrentID",
+                source: std::sync::Arc::new(e),
+            })
+        })
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::sea_query::ValueType for TorrentID {
+    fn try_from(v: sea_orm::Value) -> Result<Self, sea_orm::sea_query::ValueTypeErr> {
+        match v {
+            // TODO: What to do with None String?
+            // This should probably work with Option<MagnetLink> but not with MagnetLink
+            // but i have no idea how sea orm works...
+            sea_orm::Value::String(Some(s)) => {
+                TorrentID::new(&s).map_err(|_e| sea_orm::sea_query::ValueTypeErr)
+            }
+            _ => Err(sea_orm::sea_query::ValueTypeErr),
+        }
+    }
+
+    fn type_name() -> String {
+        "TorrentID".to_string()
+    }
+
+    fn array_type() -> sea_orm::sea_query::ArrayType {
+        sea_orm::sea_query::ArrayType::String
+    }
+
+    fn column_type() -> sea_orm::sea_query::ColumnType {
+        sea_orm::sea_query::ColumnType::String(sea_orm::sea_query::table::StringLen::N(40))
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::sea_query::Nullable for TorrentID {
+    fn null() -> sea_orm::sea_query::Value {
+        sea_orm::sea_query::Value::String(None)
+    }
+}
