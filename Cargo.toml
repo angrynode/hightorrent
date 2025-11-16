@@ -28,6 +28,9 @@ serde = { version = "1", features = [ "derive" ] }
 fluent-uri = { version = "0.4", features = [ "serde" ] }
 # For Sea-ORM integration
 sea-orm = { version = "2.0.0-rc.19", optional = true }
+sea-orm-migration = { version = "2.0.0-rc.19", optional = true }
+async-tempfile = { version = "0.7", optional = true }
+tokio = { version = "1", optional = true }
 
 [dev-dependencies]
 serde_json = "1"
@@ -36,7 +39,7 @@ serde_json = "1"
 magnet_force_name = []
 unknown_tracker_scheme = []
 sea_orm = [ "dep:sea-orm" ]
-test_sea_orm = [ "dep:sea-orm", "sea-orm/sqlx-sqlite" ]
+test_sea_orm = [ "dep:sea-orm", "sea-orm/sqlx-sqlite", "dep:tokio", "tokio/macros", "tokio/rt", "dep:async-tempfile", "dep:sea-orm-migration", "sea-orm-migration/runtime-tokio" ]
 
 [[test]]
 name = "magnet_force_name"
@@ -53,5 +56,5 @@ test = true
 [[test]]
 name = "sea_orm"
 path = "tests/sea_orm.rs"
-required-features = [ "sea_orm" ]
+required-features = [ "sea_orm", "test_sea_orm" ]
 test = true
