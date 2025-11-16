@@ -3,6 +3,8 @@ use fluent_uri::{ParseError as UriParseError, Uri};
 
 use crate::{InfoHash, InfoHashError, TorrentID, Tracker, TrackerError};
 
+use std::str::FromStr;
+
 /// Error occurred during parsing a [`MagnetLink`](crate::magnet::MagnetLink).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MagnetLinkError {
@@ -119,6 +121,8 @@ impl std::error::Error for MagnetLinkError {
 /// More information is specified in [BEP-0009](https://bittorrent.org/beps/bep_0009.html), and
 /// even more appears in the wild, as explained [on Wikipedia](https://en.wikipedia.org/wiki/Magnet_URI_scheme).
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "sea_orm", derive(sea_orm::DeriveValueType))]
+#[cfg_attr(feature = "sea_orm", sea_orm(value_type = "String"))]
 pub struct MagnetLink {
     /// Only mandatory field for magnet link parsing, unless the
     /// `magnet_force_name` crate feature is enabled.
@@ -328,61 +332,11 @@ impl PartialEq for MagnetLink {
     }
 }
 
-#[cfg(feature = "sea_orm")]
-impl From<MagnetLink> for sea_orm::sea_query::Value {
-    fn from(m: MagnetLink) -> Self {
-        Self::String(Some(m.to_string()))
-    }
-}
+impl FromStr for MagnetLink {
+    type Err = MagnetLinkError;
 
-#[cfg(feature = "sea_orm")]
-impl sea_orm::TryGetable for MagnetLink {
-    fn try_get_by<I: sea_orm::ColIdx>(
-        res: &sea_orm::QueryResult,
-        index: I,
-    ) -> Result<Self, sea_orm::error::TryGetError> {
-        let val: String = res.try_get_by(index)?;
-        MagnetLink::new(&val).map_err(|e| {
-            sea_orm::error::TryGetError::DbErr(sea_orm::DbErr::TryIntoErr {
-                from: "String",
-                into: "MagnetLink",
-                source: std::sync::Arc::new(e),
-            })
-        })
-    }
-}
-
-#[cfg(feature = "sea_orm")]
-impl sea_orm::sea_query::ValueType for MagnetLink {
-    fn try_from(v: sea_orm::Value) -> Result<Self, sea_orm::sea_query::ValueTypeErr> {
-        match v {
-            // TODO: What to do with None String?
-            // This should probably work with Option<MagnetLink> but not with MagnetLink
-            // but i have no idea how sea orm works...
-            sea_orm::Value::String(Some(s)) => {
-                MagnetLink::new(&s).map_err(|_e| sea_orm::sea_query::ValueTypeErr)
-            }
-            _ => Err(sea_orm::sea_query::ValueTypeErr),
-        }
-    }
-
-    fn type_name() -> String {
-        "MagnetLink".to_string()
-    }
-
-    fn array_type() -> sea_orm::sea_query::ArrayType {
-        sea_orm::sea_query::ArrayType::String
-    }
-
-    fn column_type() -> sea_orm::sea_query::ColumnType {
-        sea_orm::sea_query::ColumnType::String(sea_orm::sea_query::table::StringLen::None)
-    }
-}
-
-#[cfg(feature = "sea_orm")]
-impl sea_orm::sea_query::Nullable for MagnetLink {
-    fn null() -> sea_orm::sea_query::Value {
-        sea_orm::sea_query::Value::String(None)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
     }
 }
 
