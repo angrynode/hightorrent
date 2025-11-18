@@ -40,8 +40,9 @@ mod magnet {
     impl ActiveModelBehavior for ActiveModel {}
 }
 
-mod mixed {
+pub mod mixed {
     use super::*;
+    use sea_orm_migration::prelude::*;
 
     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
     #[sea_orm(table_name = "mixed")]
@@ -61,9 +62,7 @@ mod mixed {
     impl ActiveModelBehavior for ActiveModel {}
 
     pub mod migration {
-        use sea_orm_migration::prelude::*;
-
-        mod m20251115_01_mixed {
+        pub mod m20251115_01_mixed {
             use sea_orm_migration::{prelude::*, schema::*};
 
             #[derive(DeriveMigrationName)]
@@ -100,13 +99,83 @@ mod mixed {
                 Magnet,
             }
         }
+    }
+
+    pub struct Migrator;
+
+    #[async_trait::async_trait]
+    impl MigratorTrait for Migrator {
+        fn migrations() -> Vec<Box<dyn MigrationTrait>> {
+            vec![Box::new(migration::m20251115_01_mixed::Migration)]
+        }
+    }
+}
+
+pub mod optional_mixed {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "optional_mixed")]
+    pub struct Model {
+        #[sea_orm(primary_key)]
+        pub id: i32,
+        pub torrent_id: Option<TorrentID>,
+        pub magnet: Option<MagnetLink>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    #[async_trait::async_trait]
+    impl ActiveModelBehavior for ActiveModel {}
+
+    pub mod migration {
+        use sea_orm_migration::prelude::*;
+
+        pub mod m20251118_01_optional_mixed {
+            use sea_orm_migration::{prelude::*, schema::*};
+
+            #[derive(DeriveMigrationName)]
+            pub struct Migration;
+
+            #[async_trait::async_trait]
+            impl MigrationTrait for Migration {
+                async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+                    manager
+                        .create_table(
+                            Table::create()
+                                .table(OptionalMixed::Table)
+                                .if_not_exists()
+                                .col(pk_auto(OptionalMixed::Id))
+                                .col(string(OptionalMixed::TorrentID))
+                                .col(string(OptionalMixed::Magnet))
+                                .to_owned(),
+                        )
+                        .await
+                }
+
+                async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+                    manager
+                        .drop_table(Table::drop().table(OptionalMixed::Table).to_owned())
+                        .await
+                }
+            }
+
+            #[derive(DeriveIden)]
+            enum OptionalMixed {
+                Table,
+                Id,
+                TorrentID,
+                Magnet,
+            }
+        }
 
         pub struct Migrator;
 
         #[async_trait::async_trait]
         impl MigratorTrait for Migrator {
             fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-                vec![Box::new(m20251115_01_mixed::Migration)]
+                vec![Box::new(m20251118_01_optional_mixed::Migration)]
             }
         }
     }
@@ -143,13 +212,13 @@ async fn test_torrent_real_db() {
     use sea_orm_migration::*;
 
     let tmpdir = async_tempfile::TempDir::new().await.unwrap();
-    let sqlite = tmpdir.join("db.sqlite");
+    let sqlite = tmpdir.join("mixed.sqlite");
     let sqlite_str = sqlite.to_str().unwrap();
 
     let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
         .await
         .unwrap();
-    mixed::migration::Migrator::up(&db, None).await.unwrap();
+    mixed::Migrator::up(&db, None).await.unwrap();
 
     let magnet =
         MagnetLink::new(&std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap())
@@ -236,4 +305,76 @@ async fn test_torrent_real_db() {
 
     assert!(found_one);
     assert!(found_two);
+}
+
+#[tokio::test]
+async fn test_torrent_real_optional_none() {
+    use sea_orm_migration::*;
+
+    let tmpdir = async_tempfile::TempDir::new().await.unwrap();
+    let sqlite = tmpdir.join("optional_mixed_none.sqlite");
+    let sqlite_str = sqlite.to_str().unwrap();
+
+    let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
+        .await
+        .unwrap();
+    optional_mixed::migration::Migrator::up(&db, None)
+        .await
+        .unwrap();
+
+    // Try with None
+    let model = optional_mixed::ActiveModel {
+        torrent_id: Set(None),
+        magnet: Set(None),
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let nonactive_model = model.try_into_model().unwrap();
+    let saved_model = optional_mixed::Entity::find()
+        .filter(optional_mixed::Column::Magnet.eq(Option::<MagnetLink>::None))
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model.magnet.as_ref(), None);
+    assert_eq!(nonactive_model.magnet.as_ref(), None);
+}
+
+#[tokio::test]
+async fn test_torrent_real_optional_notset() {
+    use sea_orm_migration::*;
+
+    let tmpdir = async_tempfile::TempDir::new().await.unwrap();
+    let sqlite = tmpdir.join("optional_mixed_none.sqlite");
+    let sqlite_str = sqlite.to_str().unwrap();
+
+    let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
+        .await
+        .unwrap();
+    optional_mixed::migration::Migrator::up(&db, None)
+        .await
+        .unwrap();
+
+    // Try with None
+    let model = optional_mixed::ActiveModel {
+        torrent_id: NotSet,
+        magnet: NotSet,
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let nonactive_model = model.try_into_model().unwrap();
+    let saved_model = optional_mixed::Entity::find()
+        .filter(optional_mixed::Column::Magnet.eq(Option::<MagnetLink>::None))
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model.magnet.as_ref(), None);
+    assert_eq!(nonactive_model.magnet.as_ref(), None);
 }
