@@ -27,8 +27,8 @@ rustc-hex = "2.1"
 serde = { version = "1", features = [ "derive" ] }
 fluent-uri = { version = "0.4", features = [ "serde" ] }
 # For Sea-ORM integration
-sea-orm = { version = "2.0.0-rc.18", optional = true }
-sea-orm-migration = { version = "2.0.0-rc.18", optional = true }
+sea-orm = { git = "https://github.com/SeaQL/sea-orm", optional = true }
+sea-orm-migration = { git = "https://github.com/SeaQL/sea-orm", optional = true }
 async-tempfile = { version = "0.7", optional = true }
 tokio = { version = "1", optional = true }
 

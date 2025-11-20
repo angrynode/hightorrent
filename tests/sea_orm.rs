@@ -147,8 +147,8 @@ pub mod optional_mixed {
                                 .table(OptionalMixed::Table)
                                 .if_not_exists()
                                 .col(pk_auto(OptionalMixed::Id))
-                                .col(string(OptionalMixed::TorrentID))
-                                .col(string(OptionalMixed::Magnet))
+                                .col(string_null(OptionalMixed::TorrentID))
+                                .col(string_null(OptionalMixed::Magnet))
                                 .to_owned(),
                         )
                         .await
@@ -332,6 +332,11 @@ async fn test_torrent_real_optional_none() {
     .await
     .unwrap();
 
+    let list = optional_mixed::Entity::find().all(&db).await.unwrap();
+    for entry in list {
+        println!("- {:?}", entry);
+    }
+
     let nonactive_model = model.try_into_model().unwrap();
     let saved_model = optional_mixed::Entity::find()
         .filter(optional_mixed::Column::Magnet.eq(Option::<MagnetLink>::None))
@@ -367,6 +372,11 @@ async fn test_torrent_real_optional_notset() {
     .save(&db)
     .await
     .unwrap();
+
+    let list = optional_mixed::Entity::find().all(&db).await.unwrap();
+    for entry in list {
+        println!("- {:?}", entry);
+    }
 
     let nonactive_model = model.try_into_model().unwrap();
     let saved_model = optional_mixed::Entity::find()
