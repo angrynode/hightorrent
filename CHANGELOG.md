@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- the `sea_orm` crate feature allows to use `MagnetLink`, `TorrentFile` and `TorrentID`
+  in sea_orm models
 - `TorrentFile`, `DecodedTorrent` and `DecodedInfo` implement `PartialEq`
 
 ## Version 0.4.0 (2025-11-10)
