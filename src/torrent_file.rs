@@ -1,5 +1,7 @@
 use bt_bencode::Value as BencodeValue;
 use rustc_hex::ToHex;
+#[cfg(feature = "sea_orm")]
+use sea_orm::prelude::*;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
@@ -327,6 +329,61 @@ impl TorrentFile {
 
     pub fn id(&self) -> TorrentID {
         TorrentID::from_infohash(&self.hash)
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl From<TorrentFile> for sea_orm::sea_query::Value {
+    fn from(t: TorrentFile) -> Self {
+        Value::Bytes(Some(t.to_vec()))
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::TryGetable for TorrentFile {
+    fn try_get_by<I: sea_orm::ColIdx>(
+        res: &sea_orm::QueryResult,
+        index: I,
+    ) -> Result<Self, sea_orm::error::TryGetError> {
+        let val: Vec<u8> = res.try_get_by(index)?;
+        TorrentFile::from_slice(&val).map_err(|e| {
+            sea_orm::error::TryGetError::DbErr(sea_orm::DbErr::TryIntoErr {
+                from: "Bytes",
+                into: "TorrentFile",
+                source: std::sync::Arc::new(e),
+            })
+        })
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::sea_query::ValueType for TorrentFile {
+    fn try_from(v: sea_orm::Value) -> Result<Self, sea_orm::sea_query::ValueTypeErr> {
+        match v {
+            sea_orm::Value::Bytes(Some(s)) => {
+                TorrentFile::from_slice(&s).map_err(|_e| sea_orm::sea_query::ValueTypeErr)
+            }
+            _ => Err(sea_orm::sea_query::ValueTypeErr),
+        }
+    }
+
+    fn type_name() -> String {
+        "TorrentFile".to_string()
+    }
+
+    fn array_type() -> sea_orm::sea_query::ArrayType {
+        sea_orm::sea_query::ArrayType::Bytes
+    }
+
+    fn column_type() -> sea_orm::sea_query::ColumnType {
+        sea_orm::sea_query::ColumnType::VarBinary(StringLen::None)
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::sea_query::Nullable for TorrentFile {
+    fn null() -> sea_orm::sea_query::Value {
+        sea_orm::sea_query::Value::Bytes(None)
     }
 }
 

@@ -1,4 +1,4 @@
-use hightorrent::{MagnetLink, TorrentID};
+use hightorrent::{MagnetLink, TorrentFile, TorrentID};
 use sea_orm::entity::prelude::*;
 use sea_orm::*;
 
@@ -464,4 +464,103 @@ async fn test_torrent_real_optional_notset() {
         .unwrap();
     assert_eq!(saved_model.magnet.as_ref(), None);
     assert_eq!(nonactive_model.magnet.as_ref(), None);
+}
+
+#[tokio::test]
+async fn test_torrent_real_db() {
+    use sea_orm_migration::*;
+
+    let tmpdir = async_tempfile::TempDir::new().await.unwrap();
+    let sqlite = tmpdir.join("mixed.sqlite");
+    let sqlite_str = sqlite.to_str().unwrap();
+
+    let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
+        .await
+        .unwrap();
+    mixed_torrent::Migrator::up(&db, None).await.unwrap();
+
+    let torrent =
+        TorrentFile::from_slice(&std::fs::read("tests/bittorrent-v2-test.torrent").unwrap())
+            .unwrap();
+
+    let model = mixed_torrent::ActiveModel {
+        torrent_id: Set(torrent.id()),
+        torrent_file: Set(torrent.clone()),
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let torrent2 =
+        TorrentFile::from_slice(&std::fs::read("tests/bittorrent-v2-hybrid-test.torrent").unwrap())
+            .unwrap();
+
+    let model2 = mixed_torrent::ActiveModel {
+        torrent_id: Set(torrent2.id()),
+        torrent_file: Set(torrent2.clone()),
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let nonactive_model = model.try_into_model().unwrap();
+    let saved_model_by_id = mixed_torrent::Entity::find_by_id(nonactive_model.id)
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model_by_id, nonactive_model);
+    assert_eq!(saved_model_by_id.torrent_file, torrent);
+    assert_eq!(nonactive_model.torrent_file, torrent);
+
+    let nonactive_model2 = model2.try_into_model().unwrap();
+    let saved_model_by_id2 = mixed_torrent::Entity::find_by_id(nonactive_model2.id)
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model_by_id2, nonactive_model2);
+    assert_eq!(saved_model_by_id2.torrent_file, torrent2);
+    assert_eq!(nonactive_model2.torrent_file, torrent2);
+
+    // Try query by TorrentID
+    let saved_model_by_torrentid = mixed_torrent::Entity::find()
+        .filter(mixed_torrent::Column::TorrentId.eq(torrent.id()))
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model_by_id, nonactive_model);
+    assert_eq!(saved_model_by_torrentid.torrent_file, torrent);
+
+    // Try query by TorrentFile
+    let saved_model_by_torrent = mixed_torrent::Entity::find()
+        .filter(mixed_torrent::Column::TorrentFile.eq(torrent.clone()))
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model_by_id, nonactive_model);
+    assert_eq!(saved_model_by_torrent.torrent_file, torrent);
+
+    // Try listing torrents
+    let mut found_one = false;
+    let mut found_two = false;
+    let list = mixed_torrent::Entity::find().all(&db).await.unwrap();
+    println!("{:?}", list);
+    for entry in list {
+        if entry.torrent_file == torrent && entry.torrent_id == torrent.id() {
+            found_one = true;
+            continue;
+        }
+
+        if entry.torrent_file == torrent2 && entry.torrent_id == torrent2.id() {
+            found_two = true;
+        }
+    }
+
+    assert!(found_one);
+    assert!(found_two);
 }
