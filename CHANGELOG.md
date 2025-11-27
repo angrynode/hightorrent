@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED (YYYY-MM-DD)
 
+### Added
+
+- `TorrentFile`, `DecodedTorrent` and `DecodedInfo` implement `PartialEq`
+
 ## Version 0.4.0 (2025-11-10)
 
 This release is focused on stricter parsing of torrents and magnets, and
