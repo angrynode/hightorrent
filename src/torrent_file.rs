@@ -85,7 +85,7 @@ impl std::error::Error for TorrentFileError {
 /// ```ignore
 /// std::fs::write("export.torrent", &torrent.to_vec()).unwrap();
 /// ```
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TorrentFile {
     pub hash: InfoHash,
     pub name: String,
@@ -98,7 +98,7 @@ pub struct TorrentFile {
 /// In its present form, DecodedTorrent mostly cares about the info dict, but preserves other fields
 /// as [`BencodeValue`](bt_bencode::BencodeValue) in an `extra` mapping so you can implement
 /// your own extra parsing.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DecodedTorrent {
     /// Main tracker
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,7 +219,7 @@ impl UnsafeV1FileContent {
 /// mapping so you can implement your own extra parsing.
 // bt_bencode does not support serializing None options and empty HashMaps, so we skip
 // serialization in those cases.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DecodedInfo {
     #[serde(rename = "meta version")]
     #[serde(skip_serializing_if = "Option::is_none")]
