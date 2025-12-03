@@ -3,6 +3,8 @@ use fluent_uri::{ParseError as UriParseError, Uri};
 
 use crate::{InfoHash, InfoHashError, TorrentID, Tracker, TrackerError};
 
+use std::str::FromStr;
+
 /// Error occurred during parsing a [`MagnetLink`](crate::magnet::MagnetLink).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MagnetLinkError {
@@ -118,7 +120,11 @@ impl std::error::Error for MagnetLinkError {
 ///
 /// More information is specified in [BEP-0009](https://bittorrent.org/beps/bep_0009.html), and
 /// even more appears in the wild, as explained [on Wikipedia](https://en.wikipedia.org/wiki/Magnet_URI_scheme).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "sea_orm", derive(sea_orm::DeriveValueType))]
+#[cfg_attr(feature = "sea_orm", sea_orm(value_type = "String"))]
+#[serde(try_from = "String")]
+#[serde(into = "String")]
 pub struct MagnetLink {
     /// Only mandatory field for magnet link parsing, unless the
     /// `magnet_force_name` crate feature is enabled.
@@ -319,6 +325,34 @@ impl MagnetLink {
 impl std::fmt::Display for MagnetLink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "magnet:?{}", self.query)
+    }
+}
+
+impl PartialEq for MagnetLink {
+    fn eq(&self, other: &Self) -> bool {
+        self.query == other.query
+    }
+}
+
+impl FromStr for MagnetLink {
+    type Err = MagnetLinkError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
+    }
+}
+
+impl TryFrom<String> for MagnetLink {
+    type Error = MagnetLinkError;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::new(&s)
+    }
+}
+
+impl From<MagnetLink> for String {
+    fn from(m: MagnetLink) -> Self {
+        m.to_string()
     }
 }
 
@@ -560,5 +594,14 @@ mod tests {
             .map(|tracker| tracker.url().to_string())
             .collect::<Vec<_>>();
         assert!(found.is_empty());
+    }
+
+    #[test]
+    fn serialization_roundtrip() {
+        let magnet_url = std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap();
+        let magnet = MagnetLink::new(&magnet_url).unwrap();
+        let json_url = serde_json::to_string(&magnet_url).unwrap();
+        let deserialized_magnet: MagnetLink = serde_json::from_str(&json_url).unwrap();
+        assert_eq!(deserialized_magnet, magnet,);
     }
 }

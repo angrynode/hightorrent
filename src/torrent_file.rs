@@ -1,5 +1,7 @@
 use bt_bencode::Value as BencodeValue;
 use rustc_hex::ToHex;
+#[cfg(feature = "sea_orm")]
+use sea_orm::prelude::*;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
@@ -85,7 +87,7 @@ impl std::error::Error for TorrentFileError {
 /// ```ignore
 /// std::fs::write("export.torrent", &torrent.to_vec()).unwrap();
 /// ```
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TorrentFile {
     pub hash: InfoHash,
     pub name: String,
@@ -98,7 +100,7 @@ pub struct TorrentFile {
 /// In its present form, DecodedTorrent mostly cares about the info dict, but preserves other fields
 /// as [`BencodeValue`](bt_bencode::BencodeValue) in an `extra` mapping so you can implement
 /// your own extra parsing.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DecodedTorrent {
     /// Main tracker
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -123,20 +125,10 @@ pub struct DecodedTorrent {
 
 impl DecodedTorrent {
     pub fn files(&self) -> Result<Vec<TorrentContent>, TorrentFileError> {
-        if self.info.files.is_none() {
-            if self.info.file_tree.is_none() {
-                // V1 torrent with single file
-                Ok(vec![TorrentContent {
-                    path: PathBuf::from(&self.info.name),
-                    size: self.info.length.unwrap(),
-                }])
-            } else {
-                todo!("v2 torrent files");
-            }
-        } else {
+        if let Some(info_files) = &self.info.files {
             // V1 torrent with multiple files
             let mut files: Vec<TorrentContent> = vec![];
-            for file in self.info.files.as_ref().unwrap() {
+            for file in info_files {
                 // TODO: error
                 let f: UnsafeV1FileContent = bt_bencode::from_value(file.clone()).unwrap();
                 if let Some(parsed_file) = f.to_torrent_content()? {
@@ -146,8 +138,18 @@ impl DecodedTorrent {
 
             // Sort files by alphabetical order
             files.sort();
-            Ok(files)
+            return Ok(files);
         }
+
+        if let Some(_info_file_tree) = &self.info.file_tree {
+            todo!("v2 torrent files");
+        }
+
+        // V1 torrent with single file
+        Ok(vec![TorrentContent {
+            path: PathBuf::from(&self.info.name),
+            size: self.info.length.unwrap(),
+        }])
     }
 }
 
@@ -219,7 +221,7 @@ impl UnsafeV1FileContent {
 /// mapping so you can implement your own extra parsing.
 // bt_bencode does not support serializing None options and empty HashMaps, so we skip
 // serialization in those cases.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DecodedInfo {
     #[serde(rename = "meta version")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -327,6 +329,61 @@ impl TorrentFile {
 
     pub fn id(&self) -> TorrentID {
         TorrentID::from_infohash(&self.hash)
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl From<TorrentFile> for sea_orm::sea_query::Value {
+    fn from(t: TorrentFile) -> Self {
+        Value::Bytes(Some(t.to_vec()))
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::TryGetable for TorrentFile {
+    fn try_get_by<I: sea_orm::ColIdx>(
+        res: &sea_orm::QueryResult,
+        index: I,
+    ) -> Result<Self, sea_orm::error::TryGetError> {
+        let val: Vec<u8> = res.try_get_by(index)?;
+        TorrentFile::from_slice(&val).map_err(|e| {
+            sea_orm::error::TryGetError::DbErr(sea_orm::DbErr::TryIntoErr {
+                from: "Bytes",
+                into: "TorrentFile",
+                source: std::sync::Arc::new(e),
+            })
+        })
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::sea_query::ValueType for TorrentFile {
+    fn try_from(v: sea_orm::Value) -> Result<Self, sea_orm::sea_query::ValueTypeErr> {
+        match v {
+            sea_orm::Value::Bytes(Some(s)) => {
+                TorrentFile::from_slice(&s).map_err(|_e| sea_orm::sea_query::ValueTypeErr)
+            }
+            _ => Err(sea_orm::sea_query::ValueTypeErr),
+        }
+    }
+
+    fn type_name() -> String {
+        "TorrentFile".to_string()
+    }
+
+    fn array_type() -> sea_orm::sea_query::ArrayType {
+        sea_orm::sea_query::ArrayType::Bytes
+    }
+
+    fn column_type() -> sea_orm::sea_query::ColumnType {
+        sea_orm::sea_query::ColumnType::VarBinary(StringLen::None)
+    }
+}
+
+#[cfg(feature = "sea_orm")]
+impl sea_orm::sea_query::Nullable for TorrentFile {
+    fn null() -> sea_orm::sea_query::Value {
+        sea_orm::sea_query::Value::Bytes(None)
     }
 }
 
