@@ -125,20 +125,10 @@ pub struct DecodedTorrent {
 
 impl DecodedTorrent {
     pub fn files(&self) -> Result<Vec<TorrentContent>, TorrentFileError> {
-        if self.info.files.is_none() {
-            if self.info.file_tree.is_none() {
-                // V1 torrent with single file
-                Ok(vec![TorrentContent {
-                    path: PathBuf::from(&self.info.name),
-                    size: self.info.length.unwrap(),
-                }])
-            } else {
-                todo!("v2 torrent files");
-            }
-        } else {
+        if let Some(info_files) = &self.info.files {
             // V1 torrent with multiple files
             let mut files: Vec<TorrentContent> = vec![];
-            for file in self.info.files.as_ref().unwrap() {
+            for file in info_files {
                 // TODO: error
                 let f: UnsafeV1FileContent = bt_bencode::from_value(file.clone()).unwrap();
                 if let Some(parsed_file) = f.to_torrent_content()? {
@@ -148,8 +138,18 @@ impl DecodedTorrent {
 
             // Sort files by alphabetical order
             files.sort();
-            Ok(files)
+            return Ok(files);
         }
+
+        if let Some(_info_file_tree) = &self.info.file_tree {
+            todo!("v2 torrent files");
+        }
+
+        // V1 torrent with single file
+        Ok(vec![TorrentContent {
+            path: PathBuf::from(&self.info.name),
+            size: self.info.length.unwrap(),
+        }])
     }
 }
 
