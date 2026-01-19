@@ -345,7 +345,7 @@ impl sea_orm::TryGetable for TorrentFile {
         res: &sea_orm::QueryResult,
         index: I,
     ) -> Result<Self, sea_orm::error::TryGetError> {
-        let val: Vec<u8> = res.try_get_by(index)?;
+        let val = <Vec<u8> as sea_orm::TryGetable>::try_get_by(res, index)?;
         TorrentFile::from_slice(&val).map_err(|e| {
             sea_orm::error::TryGetError::DbErr(sea_orm::DbErr::TryIntoErr {
                 from: "Bytes",
