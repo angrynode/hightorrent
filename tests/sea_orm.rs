@@ -252,6 +252,76 @@ pub mod optional_mixed_magnet {
     }
 }
 
+pub mod optional_mixed_torrent {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "optional_mixed_torrent")]
+    pub struct Model {
+        #[sea_orm(primary_key)]
+        pub id: i32,
+        pub torrent_id: Option<TorrentID>,
+        pub torrent: Option<TorrentFile>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    #[async_trait::async_trait]
+    impl ActiveModelBehavior for ActiveModel {}
+
+    pub mod migration {
+        use sea_orm_migration::prelude::*;
+
+        pub mod m20251118_01_optional_mixed_torrent {
+            use sea_orm_migration::{prelude::*, schema::*};
+
+            #[derive(DeriveMigrationName)]
+            pub struct Migration;
+
+            #[async_trait::async_trait]
+            impl MigrationTrait for Migration {
+                async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+                    manager
+                        .create_table(
+                            Table::create()
+                                .table(OptionalMixedTorrent::Table)
+                                .if_not_exists()
+                                .col(pk_auto(OptionalMixedTorrent::Id))
+                                .col(string_null(OptionalMixedTorrent::TorrentID))
+                                .col(binary(OptionalMixedTorrent::Torrent).null())
+                                .to_owned(),
+                        )
+                        .await
+                }
+
+                async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+                    manager
+                        .drop_table(Table::drop().table(OptionalMixedTorrent::Table).to_owned())
+                        .await
+                }
+            }
+
+            #[derive(DeriveIden)]
+            enum OptionalMixedTorrent {
+                Table,
+                Id,
+                TorrentID,
+                Torrent,
+            }
+        }
+
+        pub struct Migrator;
+
+        #[async_trait::async_trait]
+        impl MigratorTrait for Migrator {
+            fn migrations() -> Vec<Box<dyn MigrationTrait>> {
+                vec![Box::new(m20251118_01_optional_mixed_torrent::Migration)]
+            }
+        }
+    }
+}
+
 #[test]
 fn test_magnet_active_model() {
     let magnet =
@@ -289,7 +359,9 @@ async fn test_magnet_real_db() {
     let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
         .await
         .unwrap();
-    mixed_magnet::Migrator::up(&db, None).await.unwrap();
+    <mixed_magnet::Migrator as sea_orm_migration::MigratorTrait>::up(&db, None)
+        .await
+        .unwrap();
 
     let magnet =
         MagnetLink::new(&std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap())
@@ -389,7 +461,7 @@ async fn test_torrent_real_optional_none() {
     let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
         .await
         .unwrap();
-    optional_mixed_magnet::migration::Migrator::up(&db, None)
+    <optional_mixed_magnet::migration::Migrator as sea_orm_migration::MigratorTrait>::up(&db, None)
         .await
         .unwrap();
 
@@ -433,7 +505,7 @@ async fn test_torrent_real_optional_notset() {
     let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
         .await
         .unwrap();
-    optional_mixed_magnet::migration::Migrator::up(&db, None)
+    <optional_mixed_magnet::migration::Migrator as sea_orm_migration::MigratorTrait>::up(&db, None)
         .await
         .unwrap();
 
@@ -477,7 +549,9 @@ async fn test_torrent_real_db() {
     let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
         .await
         .unwrap();
-    mixed_torrent::Migrator::up(&db, None).await.unwrap();
+    <mixed_torrent::Migrator as sea_orm_migration::MigratorTrait>::up(&db, None)
+        .await
+        .unwrap();
 
     let torrent =
         TorrentFile::from_slice(&std::fs::read("tests/bittorrent-v2-test.torrent").unwrap())
@@ -563,4 +637,164 @@ async fn test_torrent_real_db() {
 
     assert!(found_one);
     assert!(found_two);
+}
+
+#[tokio::test]
+async fn test_torrent_file_real_optional_none() {
+    use sea_orm_migration::*;
+
+    let tmpdir = async_tempfile::TempDir::new().await.unwrap();
+    let sqlite = tmpdir.join("optional_mixed_none.sqlite");
+    let sqlite_str = sqlite.to_str().unwrap();
+
+    let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
+        .await
+        .unwrap();
+    <optional_mixed_torrent::migration::Migrator as sea_orm_migration::MigratorTrait>::up(
+        &db, None,
+    )
+    .await
+    .unwrap();
+
+    // Try with None
+    let model = optional_mixed_torrent::ActiveModel {
+        torrent_id: Set(None),
+        torrent: Set(None),
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let list = optional_mixed_torrent::Entity::find()
+        .all(&db)
+        .await
+        .unwrap();
+    for entry in list {
+        println!("- {:?}", entry);
+    }
+
+    let nonactive_model = model.try_into_model().unwrap();
+    let saved_model = optional_mixed_torrent::Entity::find()
+        .filter(optional_mixed_torrent::Column::Torrent.is_null())
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model.torrent.as_ref(), None);
+    assert_eq!(nonactive_model.torrent.as_ref(), None);
+}
+
+#[tokio::test]
+async fn test_torrent_file_real_optional_notset() {
+    use sea_orm_migration::*;
+
+    let tmpdir = async_tempfile::TempDir::new().await.unwrap();
+    let sqlite = tmpdir.join("optional_mixed_notset.sqlite");
+    let sqlite_str = sqlite.to_str().unwrap();
+
+    let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
+        .await
+        .unwrap();
+    <optional_mixed_torrent::migration::Migrator as sea_orm_migration::MigratorTrait>::up(
+        &db, None,
+    )
+    .await
+    .unwrap();
+
+    // Try with None
+    let model = optional_mixed_torrent::ActiveModel {
+        torrent_id: NotSet,
+        torrent: NotSet,
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let list = optional_mixed_torrent::Entity::find()
+        .all(&db)
+        .await
+        .unwrap();
+    for entry in list {
+        println!("- {:?}", entry);
+    }
+
+    let nonactive_model = model.try_into_model().unwrap();
+    let saved_model = optional_mixed_torrent::Entity::find()
+        .filter(optional_mixed_torrent::Column::Torrent.is_null())
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved_model.torrent.as_ref(), None);
+    assert_eq!(nonactive_model.torrent.as_ref(), None);
+}
+
+#[tokio::test]
+async fn test_torrent_file_real_optional_some() {
+    use sea_orm_migration::*;
+
+    let torrent_file =
+        TorrentFile::from_slice(&std::fs::read("tests/bittorrent-v2-hybrid-test.torrent").unwrap())
+            .unwrap();
+
+    let tmpdir = async_tempfile::TempDir::new().await.unwrap();
+    let sqlite = tmpdir.join("optional_mixed_notset.sqlite");
+    let sqlite_str = sqlite.to_str().unwrap();
+
+    let db = sea_orm::Database::connect(&format!("sqlite://{}?mode=rwc", sqlite_str))
+        .await
+        .unwrap();
+    <optional_mixed_torrent::migration::Migrator as sea_orm_migration::MigratorTrait>::up(
+        &db, None,
+    )
+    .await
+    .unwrap();
+
+    let model_none = optional_mixed_torrent::ActiveModel {
+        torrent_id: NotSet,
+        torrent: NotSet,
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let model_some = optional_mixed_torrent::ActiveModel {
+        torrent_id: Set(Some(torrent_file.id())),
+        torrent: Set(Some(torrent_file.clone())),
+        ..Default::default()
+    }
+    .save(&db)
+    .await
+    .unwrap();
+
+    let nonactive_model_some = model_some.try_into_model().unwrap();
+    let nonactive_model_none = model_none.try_into_model().unwrap();
+
+    let list = optional_mixed_torrent::Entity::find()
+        .all(&db)
+        .await
+        .unwrap();
+    assert_eq!(list.len(), 2);
+    for entry in list {
+        println!("- {:?}", entry);
+        assert!(entry == nonactive_model_some || entry == nonactive_model_none);
+    }
+
+    let saved_model_some = optional_mixed_torrent::Entity::find()
+        .filter(optional_mixed_torrent::Column::TorrentId.eq(torrent_file.id()))
+        .one(&db)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        saved_model_some.torrent.as_ref(),
+        Some(torrent_file.clone()).as_ref()
+    );
+    assert_eq!(
+        nonactive_model_some.torrent.as_ref(),
+        Some(torrent_file.clone()).as_ref()
+    );
 }
