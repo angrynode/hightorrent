@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
 
 /// A source of peers. Can be a [`Tracker`](crate::tracker::Tracker) or a decentralized source.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PeerSource {
     DHT,
     PEX,
@@ -16,7 +16,7 @@ pub enum PeerSource {
 ///
 /// This is usually parsed directly from a [`TorrentFile`](crate::torrent_file::TorrentFile)
 /// or a [`MagnetLink`](crate::magnet::MagnetLink).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Tracker {
     /// Tracker URL scheme (usually `ws`, `http(s)`, or `udp`)
     scheme: TrackerScheme,
@@ -94,7 +94,7 @@ impl FromStr for Tracker {
 /// Does not implement Serialize/Deserialize because it's actually not in the
 /// torrent data. It is constructed from the parsed tracker URLs contained in
 /// the torrent data.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TrackerScheme {
     Websocket,
     Http,
