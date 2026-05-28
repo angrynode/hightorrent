@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TorrentFile`, `DecodedTorrent` and `DecodedInfo` implement `PartialEq`
 - `MagnetFile` implements `FromStr`, `TryFrom<String>`, and `Into<String>`
 - `MagnetFile` supports serde de/serialization
+- `PeerSource`, `Tracker` and `TrackerScheme` now derive `Eq`, `PartialOrd`
+  and `Ord` so that they can be sorted in collections
 
 ## Version 0.4.0 (2025-11-10)
 
