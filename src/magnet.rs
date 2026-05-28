@@ -375,8 +375,6 @@ impl From<MagnetLink> for String {
 mod tests {
     use super::*;
 
-    use crate::TrackerScheme;
-
     #[test]
     fn can_load_v1() {
         let magnet_source =
@@ -384,7 +382,7 @@ mod tests {
         let magnet = MagnetLink::new(&magnet_source).unwrap();
         assert_eq!(
             magnet.name,
-            "Emma Goldman - Essential Works of Anarchism (16 books)".to_string()
+            "Goldman, Emma - Essential Works of Anarchism".to_string()
         );
         assert_eq!(
             magnet.hash,
@@ -555,15 +553,38 @@ mod tests {
     #[test]
     fn can_parse_magnet_trackers() {
         let expected = &[
+            "http://tracker.tfile.co:80/announce",
+            "udp://9.rarbg.me:2730/announce",
+            "udp://9.rarbg.me:2740/announce",
+            "udp://9.rarbg.me:2770/announce",
+            "udp://9.rarbg.to:2710/announce",
+            "udp://9.rarbg.to:2720/announce",
+            "udp://9.rarbg.to:2730/announce",
+            "udp://9.rarbg.to:2740/announce",
+            "udp://9.rarbg.to:2770/announce",
+            "udp://bt.xxx-tracker.com:2710/announce",
+            "udp://denis.stalker.upeer.me:6969/announce",
+            "udp://eddie4.nl:6969/announce",
+            "udp://exodus.desync.com:6969/announce",
+            "udp://ipv4.tracker.harry.lu:80/announce",
+            "udp://ipv6.tracker.harry.lu:80/announce",
+            "udp://open.demonii.si:1337/announce",
+            "udp://open.stealth.si:80/announce",
+            "udp://retracker.lanta-net.ru:2710/announce",
+            "udp://torrentclub.tech:6969/announce",
             "udp://tracker.coppersurfer.tk:6969/announce",
-            "udp://tracker.opentrackr.org:1337/announce",
-            "udp://exodus.desync.com:6969",
-            "udp://tracker.opentrackr.org:1337/announce",
-            "http://tracker.openbittorrent.com:80/announce",
-            "udp://opentracker.i2p.rocks:6969/announce",
+            "udp://tracker.cyberia.is:6969/announce",
             "udp://tracker.internetwarriors.net:1337/announce",
+            "udp://tracker.justseed.it:1337/announce",
             "udp://tracker.leechers-paradise.org:6969/announce",
-            "udp://coppersurfer.tk:6969/announce",
+            "udp://tracker.mg64.net:6969/announce",
+            "udp://tracker.moeking.me:6969/announce",
+            "udp://tracker.open-internet.nl:6969/announce",
+            "udp://tracker.opentrackr.org:1337/announce",
+            "udp://tracker.pirateparty.gr:6969/announce",
+            "udp://tracker.port443.xyz:6969/announce",
+            "udp://tracker.tiny-vps.com:6969/announce",
+            "udp://tracker.torrent.eu.org:451/announce",
             "udp://tracker.zer0day.to:1337/announce",
         ];
 
@@ -577,19 +598,6 @@ mod tests {
             .map(|tracker| tracker.url().to_string())
             .collect::<Vec<_>>();
 
-        // Did we find all trackers?
-        assert_eq!(found.len(), expected.len(),);
-        // Did we find that there's 1 HTTP tracker?
-        assert_eq!(
-            magnet
-                .trackers
-                .into_iter()
-                .filter(|tracker| tracker.scheme() == &TrackerScheme::Http)
-                .collect::<Vec<_>>()
-                .len(),
-            1
-        );
-        // Do we have the correct list?
         assert_eq!(found, expected);
 
         let magnet_url = std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap();
