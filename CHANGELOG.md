@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MagnetFile` supports serde de/serialization
 - `PeerSource`, `Tracker` and `TrackerScheme` now derive `Eq`, `PartialOrd`
   and `Ord` so that they can be sorted in collections
+- `TorrentFile::trackers` returns the trackers in the torrent file, sorted
+  and deduplicated; the sort order is not specified
+- `TorrentFile::magnet_link` produces a `MagnetLink` that's roughly equivalent
+  to the torrent file; some information may not be ported over, and this is
+  a one-way operation
 
 ### Changed
 
