@@ -338,7 +338,14 @@ impl std::fmt::Display for MagnetLink {
 
 impl PartialEq for MagnetLink {
     fn eq(&self, other: &Self) -> bool {
-        self.query == other.query
+        // Here we may have different ordering of the URL params so we check the
+        // values. This is more expensive but more correct.
+        //
+        // In the future, we may optimize this by reproducing a normalized query.
+        self.name == other.name
+            && self.hash == other.hash
+            // Trackers have been sorted in the constructor
+            && self.trackers == other.trackers
     }
 }
 
