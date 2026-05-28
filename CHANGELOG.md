@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PeerSource`, `Tracker` and `TrackerScheme` now derive `Eq`, `PartialOrd`
   and `Ord` so that they can be sorted in collections
 
+### Changed
+
+- `MagnetFile` sorts and deduplicates the trackers provided in the magnet URL;
+  `MagnetFile::trackers` returns them in an order, which is not specified
+
 ## Version 0.4.0 (2025-11-10)
 
 This release is focused on stricter parsing of torrents and magnets, and

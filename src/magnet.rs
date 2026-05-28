@@ -262,6 +262,11 @@ impl MagnetLink {
             hash1.hybrid(hash2)?
         };
 
+        // Reorder the trackers to provide equality
+        trackers.sort_unstable();
+        // Remove duplicates
+        trackers.dedup();
+
         Ok(MagnetLink {
             hash: final_hash,
             name: name.to_string(),
@@ -317,6 +322,9 @@ impl MagnetLink {
     }
 
     /// Returns the list of [`Tracker`](crate::tracker::Tracker) for the MagnetLink.
+    ///
+    /// The list is guaranteed to be sorted in a specific order and deduplicated,
+    /// but the order is not specified.
     pub fn trackers(&self) -> &[Tracker] {
         &self.trackers
     }
