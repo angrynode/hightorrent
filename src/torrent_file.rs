@@ -1,4 +1,8 @@
 use bt_bencode::Value as BencodeValue;
+use fluent_uri::pct_enc::{
+    encoder::{Data, Query},
+    EStr, EString,
+};
 use rustc_hex::ToHex;
 #[cfg(feature = "sea_orm")]
 use sea_orm::prelude::*;
@@ -8,7 +12,10 @@ use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::{InfoHash, InfoHashError, PieceLength, TorrentContent, TorrentID, Tracker};
+use crate::{
+    InfoHash, InfoHashError, MagnetLink, MagnetLinkError, PieceLength, TorrentContent, TorrentID,
+    Tracker,
+};
 
 /// Error occurred during parsing a [`TorrentFile`](crate::torrent_file::TorrentFile).
 #[derive(Clone, Debug, PartialEq)]
@@ -330,6 +337,70 @@ impl TorrentFile {
     pub fn id(&self) -> TorrentID {
         TorrentID::from_infohash(&self.hash)
     }
+
+    /// List the trackers in the torrent, ensuring
+    /// they're sorted and deduplicated.
+    pub fn trackers(&self) -> Vec<Tracker> {
+        let mut trackers = vec![];
+        if let Some(tracker) = &self.decoded.announce {
+            trackers.push(tracker.clone());
+        }
+
+        for tier in &self.decoded.announce_list {
+            for tracker in tier {
+                trackers.push(tracker.clone());
+            }
+        }
+
+        trackers.sort_unstable();
+        trackers.dedup();
+
+        trackers
+    }
+
+    /// Lossy transformation into a [`MagnetLink`].
+    ///
+    /// This is a lossy operation because:
+    ///
+    /// - magnet links do not contain detailed pieces information,
+    ///   so there is no reverse operation without network resolution
+    /// - not all metadata about the torrent may be added to the magnet link
+    ///
+    /// What's added to the magnet link:
+    ///
+    /// - name
+    /// - torrentID
+    /// - trackers
+    ///
+    /// For the moment, this is a fallible operation because we make sure
+    /// the produced MagnetLink can be parsed again. This operation may not
+    /// produce errors in a future release.
+    pub fn magnet_link(&self) -> Result<MagnetLink, MagnetLinkError> {
+        // Not sure how to build a URI with `magnet:` and not `magnet://`
+        // without the `Uri::builder`.
+        let mut uri = match &self.hash {
+            InfoHash::V1(h) => format!("magnet:?xt=urn:btih:{h}"),
+            InfoHash::V2(h) => format!("magnet:?xt=urn:btmh:1220{h}"),
+            InfoHash::Hybrid((h1, h2)) => format!("magnet:?xt=urn:btih:{h1}&xt=urn:btmh:1220{h2}"),
+        };
+
+        let mut buf = EString::<Query>::new();
+
+        if !self.name.is_empty() {
+            buf.push_estr(EStr::new_or_panic("&dn="));
+            buf.encode_str::<Data>(&self.name);
+        }
+
+        // We use the helper to avoid duplicates or unsorted entries
+        for tracker in self.trackers() {
+            buf.push_estr(EStr::new_or_panic("&tr="));
+            buf.encode_str::<Data>(tracker.url());
+        }
+
+        uri.push_str(buf.as_str());
+
+        MagnetLink::new(&uri)
+    }
 }
 
 #[cfg(feature = "sea_orm")]
@@ -508,5 +579,58 @@ mod tests {
         let slice = std::fs::read("tests/libtorrent/bad/v2_piece_size.torrent").unwrap();
         let res = TorrentFile::from_slice(&slice);
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_torrent_to_magnet_v2() {
+        let slice = std::fs::read("tests/bittorrent-v2-test.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        let torrent = res.unwrap();
+
+        let expected = std::fs::read_to_string("tests/bittorrent-v2-test.magnet").unwrap();
+        let magnet = torrent.magnet_link().unwrap();
+        assert_eq!(expected, magnet.to_string(),);
+    }
+
+    #[test]
+    fn test_torrent_to_magnet_hybrid() {
+        let slice = std::fs::read("tests/bittorrent-v2-hybrid-test.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        let torrent = res.unwrap();
+
+        let expected = std::fs::read_to_string("tests/bittorrent-v2-hybrid-test.magnet").unwrap();
+        let magnet = torrent.magnet_link().unwrap();
+        assert_eq!(expected, magnet.to_string(),);
+    }
+
+    #[test]
+    fn test_torrent_to_magnet_v1() {
+        let slice = std::fs::read("tests/bittorrent-v1-emma-goldman.torrent").unwrap();
+        let res = TorrentFile::from_slice(&slice);
+        let torrent = res.unwrap();
+
+        let expected = MagnetLink::new(
+            &std::fs::read_to_string("tests/bittorrent-v1-emma-goldman.magnet").unwrap(),
+        )
+        .unwrap();
+        let magnet = torrent.magnet_link().unwrap();
+
+        assert_eq!(expected.name(), magnet.name(),);
+
+        assert_eq!(expected.hash(), magnet.hash(),);
+
+        // Check for duplicates. This is useful because the `announce` in a torrent
+        // file may also be in the `announce_list` so we wanna make sure we don't have it twice.
+        for tracker in magnet.trackers() {
+            if magnet.trackers().iter().filter(|x| x == &tracker).count() > 1 {
+                panic!("Duplicate tracker: {tracker:?}");
+            }
+        }
+
+        // Check the trackers are actually equal
+        assert_eq!(magnet.trackers(), expected.trackers());
+
+        // Check for complete equality in this specific case (no information loss on the test)
+        assert_eq!(expected, magnet);
     }
 }
