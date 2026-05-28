@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED (YYYY-MM-DD)
 
+## Version 0.4.1 (2026-05-28)
+
 ### Added
 
 - the `sea_orm` crate feature allows to use `MagnetLink`, `TorrentFile` and `TorrentID`
